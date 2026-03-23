@@ -63,13 +63,19 @@ function ProductCard({ product }: { product: Product }) {
 
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
-            <span className="text-xl font-bold text-text-primary">
-              CA${product.price.toFixed(2)}
-            </span>
-            <p className="text-xs text-text-muted mt-0.5">Prices in CAD. Final price at checkout.</p>
+            {product.price > 0 ? (
+              <>
+                <span className="text-xl font-bold text-text-primary">
+                  CA${product.price.toFixed(2)}
+                </span>
+                <p className="text-xs text-text-muted mt-0.5">Prices in CAD. Final price at checkout.</p>
+              </>
+            ) : (
+              <span className="text-sm font-medium text-text-muted">Coming soon</span>
+            )}
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-center">
             {product.kustomizerModelId && (
               <Link
                 to={`/kustomize/${product.kustomizerModelId}`}
@@ -79,7 +85,7 @@ function ProductCard({ product }: { product: Product }) {
                 Customize
               </Link>
             )}
-            {product.etsyUrl && (
+            {product.etsyUrl ? (
               <a
                 href={product.etsyUrl}
                 target="_blank"
@@ -90,6 +96,20 @@ function ProductCard({ product }: { product: Product }) {
               >
                 Etsy ↗
               </a>
+            ) : (
+              <button
+                disabled
+                title="Add to cart — coming soon"
+                className="w-9 h-9 flex items-center justify-center rounded-lg
+                           bg-surface-elevated border border-border opacity-60
+                           cursor-not-allowed"
+                aria-label="Add to cart (coming soon)"
+              >
+                {/* Shopping cart icon — red */}
+                <svg fill="#e53e3e" width="18" height="18" viewBox="-1 0 19 19" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M16.417 9.579A7.917 7.917 0 1 1 8.5 1.662a7.917 7.917 0 0 1 7.917 7.917zm-3.34-2.323a.63.63 0 0 0-.628-.628H5.892l-.436-1a.384.384 0 0 0-.351-.23H3.68a.384.384 0 1 0 0 .768h1.173l1.785 4.096a.37.37 0 0 0-.087-.01 1.161 1.161 0 1 0 0 2.322h.042a.792.792 0 1 0 .864 0h3.452a.792.792 0 1 0 .864 0h.565a.384.384 0 1 0 0-.767H6.55a.393.393 0 0 1 0-.787.38.38 0 0 0 .098-.013l5.803-.602a.714.714 0 0 0 .625-.694z"/>
+                </svg>
+              </button>
             )}
           </div>
         </div>
