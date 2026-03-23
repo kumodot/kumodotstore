@@ -12,7 +12,7 @@ export function CodeOutput({ code, onExportImage }: CodeOutputProps) {
   const lines = code.split("/");
 
   const handleCopy = async () => {
-    const multiline = lines.join("\n");
+    const multiline = lines.map((l) => l + "/").join("\n");
     try {
       await navigator.clipboard.writeText(multiline);
       setCopied(true);
