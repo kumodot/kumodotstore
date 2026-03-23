@@ -311,7 +311,7 @@ function TemplateColorDots({ code }: { code: string }) {
   const colors = colorsStore.getColorsById();
   const ids = code.replace(/\//g, "_").split("_").filter(Boolean);
   return (
-    <div className="flex flex-wrap gap-0.5 max-w-[120px]">
+    <div className="grid grid-cols-4 gap-0.5 w-fit">
       {ids.map((id, i) => {
         const c = colors[id];
         const bg = c ? `rgb(${c.rgb[0]},${c.rgb[1]},${c.rgb[2]})` : "#888";
