@@ -1,6 +1,7 @@
-import { forwardRef } from "react";
+import { forwardRef, useRef } from "react";
 import type { CaseModel } from "@/types/index.ts";
 import { getRgbStyle } from "../utils/colorSystem.ts";
+import { ColorPicker } from "./ColorPicker.tsx";
 
 interface ButtonGridProps {
   model: CaseModel;
@@ -16,6 +17,8 @@ export const ButtonGrid = forwardRef<HTMLDivElement, ButtonGridProps>(
     { model, selectedColors, activeButtonIndex, onButtonClick, onColorSelect, colorOptions },
     ref
   ) {
+    const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
     return (
       <div
         ref={ref}
@@ -25,32 +28,21 @@ export const ButtonGrid = forwardRef<HTMLDivElement, ButtonGridProps>(
         {selectedColors.map((colorId, index) => (
           <div key={index} className="relative">
             <button
+              ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => onButtonClick(index)}
               style={{ backgroundColor: getRgbStyle(colorId) }}
               className="w-16 h-16 rounded-lg shadow-md hover:shadow-lg border border-border
                          transition-all duration-150 hover:scale-105 cursor-pointer"
             />
 
-            {activeButtonIndex === index && (
-              <div className="absolute mt-2 p-2 bg-surface-card rounded-lg shadow-2xl z-50
-                              grid grid-cols-4 gap-1 border border-border">
-                {colorOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    style={{
-                      backgroundColor: `rgb(${option.rgb[0]}, ${option.rgb[1]}, ${option.rgb[2]})`,
-                    }}
-                    className={`w-8 h-8 rounded border transition-all duration-100 cursor-pointer
-                      ${
-                        colorId === option.id
-                          ? "border-accent scale-110 ring-2 ring-accent-muted"
-                          : "border-border hover:border-text-secondary hover:scale-105"
-                      }`}
-                    onClick={() => onColorSelect(index, option.id)}
-                    title={option.name}
-                  />
-                ))}
-              </div>
+            {activeButtonIndex === index && buttonRefs.current[index] && (
+              <ColorPicker
+                anchorEl={buttonRefs.current[index]!}
+                colorId={colorId}
+                colorOptions={colorOptions}
+                onSelect={(id) => onColorSelect(index, id)}
+                onClose={() => onButtonClick(index)}
+              />
             )}
           </div>
         ))}
