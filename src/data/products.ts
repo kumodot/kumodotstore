@@ -15,6 +15,7 @@ import type { Product } from "@/types/index.ts";
 //   shortDescription: "One or two sentences about the product.",
 //   price: 49.99,
 //   currency: "CAD",
+//   categories: ["PO", "EP-133"],   // filter pills — any string, new ones auto-appear
 //   images: [
 //     "/kumodotstore/images/products/your-product-01.jpg",
 //     "/kumodotstore/images/products/your-product-02.jpg",
@@ -42,6 +43,7 @@ export const PRODUCTS: Product[] = [
       "/kumodotstore/images/products/POKZ_KOII-03.jpg",
       "/kumodotstore/images/products/POKZ_KOII-04.jpg",
     ],
+    categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/4446276407/kmdt-pokz-koii-edition-2026-model",
     kustomizerModelId: "pokz-02",
     promotion: { label: "NEW 2026", variant: "new" },

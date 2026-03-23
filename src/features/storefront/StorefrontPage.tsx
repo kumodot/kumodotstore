@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { PRODUCTS } from "@/data/products.ts";
 import { SITE } from "@/config/site.ts";
 import { Carousel } from "@/components/ui/Carousel.tsx";
+import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
 import type { Product } from "@/types/index.ts";
 
 const PROMO_COLORS: Record<string, string> = {
@@ -15,14 +17,6 @@ function getImages(product: Product): string[] {
   if (product.images && product.images.length > 0) return product.images;
   if (product.imageUrl) return [product.imageUrl];
   return [];
-}
-
-function sortedProducts(products: Product[]): Product[] {
-  return [...products].sort((a, b) => {
-    const aOrder = a.sortOrder ?? 999;
-    const bOrder = b.sortOrder ?? 999;
-    return aOrder - bOrder;
-  });
 }
 
 function ProductCard({ product }: { product: Product }) {
@@ -54,6 +48,21 @@ function ProductCard({ product }: { product: Product }) {
 
       {/* Info */}
       <div className="p-4 flex flex-col flex-1">
+        {/* Category pills on card */}
+        {product.categories && product.categories.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {product.categories.map((cat) => (
+              <span
+                key={cat}
+                className="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                           bg-surface-elevated border border-border text-text-muted tracking-wide"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+
         <h3 className="font-semibold text-text-primary mb-1 leading-tight">
           {product.name}
         </h3>
@@ -105,7 +114,6 @@ function ProductCard({ product }: { product: Product }) {
                            cursor-not-allowed"
                 aria-label="Add to cart (coming soon)"
               >
-                {/* Shopping cart icon — red */}
                 <svg fill="#e53e3e" width="18" height="18" viewBox="-1 0 19 19" xmlns="http://www.w3.org/2000/svg">
                   <path d="M16.417 9.579A7.917 7.917 0 1 1 8.5 1.662a7.917 7.917 0 0 1 7.917 7.917zm-3.34-2.323a.63.63 0 0 0-.628-.628H5.892l-.436-1a.384.384 0 0 0-.351-.23H3.68a.384.384 0 1 0 0 .768h1.173l1.785 4.096a.37.37 0 0 0-.087-.01 1.161 1.161 0 1 0 0 2.322h.042a.792.792 0 1 0 .864 0h3.452a.792.792 0 1 0 .864 0h.565a.384.384 0 1 0 0-.767H6.55a.393.393 0 0 1 0-.787.38.38 0 0 0 .098-.013l5.803-.602a.714.714 0 0 0 .625-.694z"/>
                 </svg>
@@ -118,8 +126,44 @@ function ProductCard({ product }: { product: Product }) {
   );
 }
 
+function sortedProducts(products: Product[]): Product[] {
+  return [...products].sort((a, b) => (a.sortOrder ?? 999) - (b.sortOrder ?? 999));
+}
+
+function allCategories(products: Product[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const p of products) {
+    for (const cat of p.categories ?? []) {
+      if (!seen.has(cat)) {
+        seen.add(cat);
+        result.push(cat);
+      }
+    }
+  }
+  return result;
+}
+
 export function StorefrontPage() {
-  const products = sortedProducts(PRODUCTS);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
+
+  const sorted = useMemo(() => sortedProducts(PRODUCTS), []);
+  const categories = useMemo(() => allCategories(sorted), [sorted]);
+
+  const visible = useMemo(() => {
+    if (activeFilters.size === 0) return sorted;
+    return sorted.filter((p) =>
+      p.categories?.some((cat) => activeFilters.has(cat))
+    );
+  }, [sorted, activeFilters]);
+
+  const toggleFilter = (cat: string) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      next.has(cat) ? next.delete(cat) : next.add(cat);
+      return next;
+    });
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4">
@@ -130,16 +174,25 @@ export function StorefrontPage() {
         </p>
       </div>
 
-      {/* Product Grid */}
       <section className="pb-12">
-        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-6">
-          Products
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <CategoryFilter
+          categories={categories}
+          active={activeFilters}
+          onToggle={toggleFilter}
+          onClear={() => setActiveFilters(new Set())}
+        />
+
+        {visible.length === 0 ? (
+          <p className="text-text-muted text-sm text-center py-16">
+            No products found for the selected filters.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {visible.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

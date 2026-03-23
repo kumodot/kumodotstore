@@ -1,7 +1,8 @@
 export interface Product {
   id: string;
   slug: string;
-  sortOrder?: number;   // lower = first. Leave undefined to sort by array order
+  sortOrder?: number;        // lower = first. Leave undefined to sort by array order
+  categories?: string[];     // e.g. ["PO", "EP-133"] — drives the filter pills
   name: string;
   shortDescription: string;
   price: number;
