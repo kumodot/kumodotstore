@@ -5,7 +5,8 @@ export interface Product {
   shortDescription: string;
   price: number;
   currency: string;
-  imageUrl?: string;
+  images?: string[];      // multiple photos for carousel
+  imageUrl?: string;     // legacy single image fallback
   etsyUrl?: string;
   kustomizerModelId?: string;
   promotion?: {
