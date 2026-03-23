@@ -52,12 +52,9 @@ export function Carousel({ images, alt, autoPlayMs = 3000 }: CarouselProps) {
         </div>
         {lightboxOpen && (
           <Lightbox
-            images={images}
-            current={0}
-            alt={alt}
+            images={images} current={0} alt={alt}
             onClose={() => setLightboxOpen(false)}
-            onPrev={prev}
-            onNext={next}
+            onPrev={prev} onNext={next}
           />
         )}
       </>
@@ -67,15 +64,15 @@ export function Carousel({ images, alt, autoPlayMs = 3000 }: CarouselProps) {
   return (
     <>
       <div
-        className="relative aspect-square overflow-hidden bg-surface-elevated group select-none"
+        className="flex flex-col"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
       >
-        {/* Images — clickable center opens lightbox */}
+        {/* Image area */}
         <div
-          className="absolute inset-0 cursor-zoom-in"
+          className="relative aspect-square overflow-hidden bg-surface-elevated group select-none cursor-zoom-in"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
           onClick={() => setLightboxOpen(true)}
         >
           {images.map((src, i) => (
@@ -88,68 +85,69 @@ export function Carousel({ images, alt, autoPlayMs = 3000 }: CarouselProps) {
               draggable={false}
             />
           ))}
+
+          {/* Progress bar at very bottom edge of image */}
+          {!isHovered && (
+            <div
+              className="absolute bottom-0 left-0 h-0.5 bg-accent/60 transition-all duration-300 pointer-events-none"
+              style={{ width: `${((current + 1) / total) * 100}%` }}
+            />
+          )}
+
+          {/* Arrows — visible on hover */}
+          <button
+            onClick={(e) => { e.stopPropagation(); prev(); }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10
+                       w-8 h-8 rounded-full bg-black/50 text-white
+                       flex items-center justify-center
+                       opacity-0 group-hover:opacity-100
+                       transition-opacity duration-200
+                       hover:bg-black/75 cursor-pointer"
+            aria-label="Previous"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M9 2L4 7l5 5" />
+            </svg>
+          </button>
+
+          <button
+            onClick={(e) => { e.stopPropagation(); next(); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10
+                       w-8 h-8 rounded-full bg-black/50 text-white
+                       flex items-center justify-center
+                       opacity-0 group-hover:opacity-100
+                       transition-opacity duration-200
+                       hover:bg-black/75 cursor-pointer"
+            aria-label="Next"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M5 2l5 5-5 5" />
+            </svg>
+          </button>
         </div>
 
-        {/* Left arrow */}
-        <button
-          onClick={(e) => { e.stopPropagation(); prev(); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10
-                     w-8 h-8 rounded-full bg-black/50 text-white
-                     flex items-center justify-center
-                     opacity-0 group-hover:opacity-100
-                     transition-opacity duration-200
-                     hover:bg-black/75 cursor-pointer"
-          aria-label="Previous"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M9 2L4 7l5 5" />
-          </svg>
-        </button>
-
-        {/* Right arrow */}
-        <button
-          onClick={(e) => { e.stopPropagation(); next(); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10
-                     w-8 h-8 rounded-full bg-black/50 text-white
-                     flex items-center justify-center
-                     opacity-0 group-hover:opacity-100
-                     transition-opacity duration-200
-                     hover:bg-black/75 cursor-pointer"
-          aria-label="Next"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M5 2l5 5-5 5" />
-          </svg>
-        </button>
-
-        {/* Dots */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1.5 pointer-events-none">
+        {/* Dots — below image, never overlapping */}
+        <div className="flex items-center justify-center gap-1.5 py-2 bg-surface-card">
           {images.map((_, i) => (
-            <div
+            <button
               key={i}
-              className={`rounded-full transition-all duration-300
-                ${i === current ? "w-4 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"}`}
+              onClick={() => setCurrent(i)}
+              className={`rounded-full transition-all duration-300 cursor-pointer ${
+                i === current
+                  ? "w-4 h-1.5 bg-accent"
+                  : "w-1.5 h-1.5 bg-border hover:bg-text-muted"
+              }`}
+              aria-label={`Go to image ${i + 1}`}
             />
           ))}
         </div>
-
-        {/* Progress bar */}
-        {!isHovered && (
-          <div
-            className="absolute bottom-0 left-0 h-0.5 bg-accent/60 transition-all duration-300 pointer-events-none"
-            style={{ width: `${((current + 1) / total) * 100}%` }}
-          />
-        )}
       </div>
 
       {lightboxOpen && (
         <Lightbox
-          images={images}
-          current={current}
-          alt={alt}
+          images={images} current={current} alt={alt}
           onClose={() => setLightboxOpen(false)}
-          onPrev={prev}
-          onNext={next}
+          onPrev={prev} onNext={next}
         />
       )}
     </>

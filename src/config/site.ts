@@ -3,6 +3,7 @@ export const SITE = {
   tagline: "Custom cases for your Pocket Operator",
   etsyUrl: "https://www.etsy.com/shop/kumodotstore",
   githubUrl: "https://github.com/kumodot",
+  instagramUrl: "https://www.instagram.com/kumodotdesign/",
   logoUrl: "/kumodotstore/images/KUMODOT_LOGOTYPE_WHITE.png",
   logoIconUrl: "/kumodotstore/images/Kumodot_LOGO_RED.png",
   navItems: [

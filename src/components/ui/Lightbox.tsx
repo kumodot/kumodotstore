@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface LightboxProps {
   images: string[];
@@ -27,22 +28,20 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
     };
   }, [handleKey]);
 
-  return (
-    // Backdrop — click outside closes
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* Modal panel — click inside does NOT close */}
       <div
         className="relative bg-surface-card border border-border rounded-2xl shadow-2xl
                    w-full max-w-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close button */}
+        {/* Close */}
         <button
-          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50
-                     hover:bg-black/70 text-white flex items-center justify-center
+          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/60
+                     hover:bg-black/80 text-white flex items-center justify-center
                      transition-colors cursor-pointer"
           onClick={onClose}
           aria-label="Close"
@@ -52,7 +51,7 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
           </svg>
         </button>
 
-        {/* Image */}
+        {/* Image area */}
         <div className="relative aspect-square bg-surface-elevated overflow-hidden">
           {images.map((src, i) => (
             <img
@@ -65,7 +64,6 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
             />
           ))}
 
-          {/* Prev arrow */}
           {total > 1 && (
             <button
               onClick={onPrev}
@@ -80,7 +78,6 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
             </button>
           )}
 
-          {/* Next arrow */}
           {total > 1 && (
             <button
               onClick={onNext}
@@ -96,16 +93,14 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
           )}
         </div>
 
-        {/* Dots */}
+        {/* Dots — below image, outside overflow */}
         {total > 1 && (
-          <div className="flex items-center justify-center gap-2 py-3">
+          <div className="flex items-center justify-center gap-2 py-3 bg-surface-card">
             {images.map((_, i) => (
               <div
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
-                  i === current
-                    ? "w-4 h-1.5 bg-accent"
-                    : "w-1.5 h-1.5 bg-border"
+                  i === current ? "w-4 h-1.5 bg-accent" : "w-1.5 h-1.5 bg-border"
                 }`}
               />
             ))}
@@ -114,4 +109,6 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
