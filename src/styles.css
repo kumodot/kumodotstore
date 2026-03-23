@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource-variable/jetbrains-mono";
+
+@theme {
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", monospace;
+
+  --color-surface: #0f0f0f;
+  --color-surface-elevated: #1a1a1a;
+  --color-surface-card: #222222;
+  --color-surface-hover: #2a2a2a;
+  --color-border: #333333;
+  --color-border-light: #444444;
+
+  --color-accent: #45ccf5;
+  --color-accent-hover: #5dd6f8;
+  --color-accent-muted: #45ccf540;
+
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #666666;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
