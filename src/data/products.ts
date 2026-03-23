@@ -2,22 +2,22 @@ import type { Product } from "@/types/index.ts";
 
 export const PRODUCTS: Product[] = [
   {
-    id: "pokz-02",
-    slug: "pokz-02",
-    name: "POKZ-02",
+    id: "pokz-koii",
+    slug: "pokz-koii",
+    name: "POKZ-KOII",
     shortDescription:
-      "Custom 3D-printed protective case for Teenage Engineering Pocket Operator. Choose your own button colors.",
+      "3D-printed protective case for Teenage Engineering Pocket Operator. 2026 model — the best, now better. Choose your own button colors.",
     price: 29.99,
     currency: "USD",
-    // Add photos to public/images/products/ and list them here:
-    // images: [
-    //   "/kumodotstore/images/products/pokz-02-1.jpg",
-    //   "/kumodotstore/images/products/pokz-02-2.jpg",
-    //   "/kumodotstore/images/products/pokz-02-3.jpg",
-    // ],
-    etsyUrl: "https://www.etsy.com/shop/kumodot",
+    images: [
+      "/kumodotstore/images/products/POKZ_KOII-01.jpg",
+      "/kumodotstore/images/products/POKZ_KOII-02.jpg",
+      "/kumodotstore/images/products/POKZ_KOII-03.jpg",
+      "/kumodotstore/images/products/POKZ_KOII-04.jpg",
+    ],
+    etsyUrl: "https://www.etsy.com/shop/kumodotstore",
     kustomizerModelId: "pokz-02",
-    promotion: { label: "POPULAR", variant: "popular" },
+    promotion: { label: "NEW 2026", variant: "new" },
     inStock: true,
   },
 ];
