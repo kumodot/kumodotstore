@@ -17,7 +17,6 @@ export const PRODUCTS: Product[] = [
       "/kumodotstore/images/products/POKZ_KOII-04.jpg",
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/4446276407/kmdt-pokz-koii-edition-2026-model",
-    kustomizerModelId: "pokz-02",
     promotion: { label: "POPULAR", variant: "popular" },
     inStock: true,
   },
@@ -31,6 +30,7 @@ export const PRODUCTS: Product[] = [
     currency: "CAD",
     categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/4308877925/kmdt-pokz-01-2026-model-pocket-operator",
+    kustomizerModelId: "pokz-02",
     inStock: true,
   },
   {
@@ -43,6 +43,7 @@ export const PRODUCTS: Product[] = [
     currency: "CAD",
     categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/1901389447/kmdt-pokz-02-2026-model-pocket-operator",
+    kustomizerModelId: "pokz-02",
     inStock: true,
   },
   {
@@ -55,6 +56,7 @@ export const PRODUCTS: Product[] = [
     currency: "CAD",
     categories: ["OP-1"],
     etsyUrl: "https://www.etsy.com/ca/listing/1071324709/kmdt-og-op-1-stands",
+    kustomizerModelId: "pokz-02",
     inStock: true,
   }
 ];
