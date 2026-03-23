@@ -67,7 +67,7 @@ export const PRODUCTS: Product[] = [
     sortOrder: 3,
     name: "POKZ-02",
     shortDescription: "A new product is on its way. Stay tuned.",
-    price: 0,
+    price: 65,
     categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/1901389447/kmdt-pokz-02-2026-model-pocket-operator",
     currency: "CAD",
