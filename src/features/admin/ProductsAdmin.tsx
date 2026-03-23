@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PRODUCTS } from "@/data/products.ts";
+import { CASE_MODELS } from "@/data/caseModels.ts";
 import type { Product } from "@/types/index.ts";
 import { exportProductsTs } from "./exportUtils.ts";
 
@@ -118,6 +119,10 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
   const [imagesInput, setImagesInput] = useState(
     initial?.images?.join("\n") ?? ""
   );
+  const [hasKustomizer, setHasKustomizer] = useState(!!initial?.kustomizerModelId);
+  const [kustomizerModel, setKustomizerModel] = useState(
+    initial?.kustomizerModelId ?? CASE_MODELS[0].id
+  );
   const [hasPromo, setHasPromo] = useState(!!initial?.promotion);
   const [promoLabel, setPromoLabel] = useState(initial?.promotion?.label ?? "NEW");
   const [promoVariant, setPromoVariant] = useState<typeof PROMOTION_VARIANTS[number]>(
@@ -138,8 +143,9 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
     const categories = categoriesInput.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
     const images = imagesInput.split("\n").map((s) => s.trim()).filter(Boolean);
     const promotion = hasPromo ? { label: promoLabel, variant: promoVariant } : undefined;
+    const kustomizerModelId = hasKustomizer ? kustomizerModel : undefined;
 
-    onSave({ ...form, id, slug: id, categories, images, promotion });
+    onSave({ ...form, id, slug: id, categories, images, promotion, kustomizerModelId });
   };
 
   const inputCls = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -204,8 +210,28 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
           <input type="text" value={form.etsyUrl ?? ""} onChange={(e) => set("etsyUrl", e.target.value)} placeholder="https://www.etsy.com/ca/listing/..." className={inputCls} />
         </div>
         <div>
-          <label className="block text-xs text-text-secondary mb-1">Kustomizer Model ID</label>
-          <input type="text" value={form.kustomizerModelId ?? ""} onChange={(e) => set("kustomizerModelId", e.target.value || undefined)} placeholder="pokz-02" className={`${inputCls} font-mono`} />
+          <div className="flex items-center gap-3 mb-2">
+            <label className="text-xs text-text-secondary">Kustomizer</label>
+            <button
+              onClick={() => setHasKustomizer((v) => !v)}
+              className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                hasKustomizer ? "bg-accent/20 text-accent" : "bg-surface-elevated text-text-muted"
+              }`}
+            >
+              {hasKustomizer ? "On" : "Off"}
+            </button>
+          </div>
+          {hasKustomizer && (
+            <select
+              value={kustomizerModel}
+              onChange={(e) => setKustomizerModel(e.target.value)}
+              className={`${inputCls} w-48`}
+            >
+              {CASE_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label className="block text-xs text-text-secondary mb-1">Stock</label>
