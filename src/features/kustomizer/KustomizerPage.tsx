@@ -48,7 +48,7 @@ export function KustomizerPage() {
     <div className="max-w-lg mx-auto px-4 py-8">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-text-primary">
-          {model.name} <span className="text-accent">Kustomizer</span>
+          {model.name} <span className="text-accent"><span className="text-red-500">K</span>ustomizer</span>
         </h1>
         <p className="text-sm text-text-secondary mt-1">{model.description}</p>
 

@@ -5,16 +5,24 @@ import { Carousel } from "@/components/ui/Carousel.tsx";
 import type { Product } from "@/types/index.ts";
 
 const PROMO_COLORS: Record<string, string> = {
-  new: "bg-green-500",
-  sale: "bg-red-500",
+  new: "bg-green-500 text-white",
+  sale: "bg-red-500 text-white",
   popular: "bg-accent text-[#0f0f0f]",
-  limited: "bg-amber-500",
+  limited: "bg-amber-500 text-[#0f0f0f]",
 };
 
 function getImages(product: Product): string[] {
   if (product.images && product.images.length > 0) return product.images;
   if (product.imageUrl) return [product.imageUrl];
   return [];
+}
+
+function sortedProducts(products: Product[]): Product[] {
+  return [...products].sort((a, b) => {
+    const aOrder = a.sortOrder ?? 999;
+    const bOrder = b.sortOrder ?? 999;
+    return aOrder - bOrder;
+  });
 }
 
 function ProductCard({ product }: { product: Product }) {
@@ -53,20 +61,20 @@ function ProductCard({ product }: { product: Product }) {
           {product.shortDescription}
         </p>
 
-        <div className="flex items-center justify-between gap-2 mt-auto">
-          <span className="text-xl font-bold text-text-primary">
-            ${product.price.toFixed(2)}
-            <span className="text-xs font-normal text-text-muted ml-1">
-              {product.currency}
+        <div className="flex items-end justify-between gap-2 mt-auto">
+          <div>
+            <span className="text-xl font-bold text-text-primary">
+              CA${product.price.toFixed(2)}
             </span>
-          </span>
+            <p className="text-xs text-text-muted mt-0.5">Prices in CAD. Final price at checkout.</p>
+          </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             {product.kustomizerModelId && (
               <Link
                 to={`/kustomize/${product.kustomizerModelId}`}
                 className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold
-                           rounded-lg hover:bg-accent-hover transition-colors"
+                           rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap"
               >
                 Customize
               </Link>
@@ -78,9 +86,9 @@ function ProductCard({ product }: { product: Product }) {
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
                            text-text-secondary rounded-lg hover:bg-surface-hover
-                           hover:text-text-primary transition-colors"
+                           hover:text-text-primary transition-colors whitespace-nowrap"
               >
-                Etsy
+                Etsy ↗
               </a>
             )}
           </div>
@@ -91,25 +99,24 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function StorefrontPage() {
+  const products = sortedProducts(PRODUCTS);
+
   return (
-    <div className="max-w-5xl mx-auto px-4 py-12">
-      {/* Hero */}
-      <section className="text-center mb-16">
-        <h1 className="text-4xl sm:text-5xl font-bold text-text-primary mb-4 tracking-tight">
-          {SITE.name}
-        </h1>
-        <p className="text-lg text-text-secondary max-w-md mx-auto leading-relaxed">
+    <div className="max-w-5xl mx-auto px-4">
+      {/* Slim tagline bar just below navbar */}
+      <div className="py-3 mb-8 border-b border-border">
+        <p className="text-xs text-text-muted tracking-widest uppercase text-center">
           {SITE.tagline}
         </p>
-      </section>
+      </div>
 
       {/* Product Grid */}
-      <section>
+      <section className="pb-12">
         <h2 className="text-xs font-semibold text-text-muted uppercase tracking-widest mb-6">
           Products
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {PRODUCTS.map((product) => (
+          {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

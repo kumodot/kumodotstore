@@ -1,6 +1,7 @@
 export interface Product {
   id: string;
   slug: string;
+  sortOrder?: number;   // lower = first. Leave undefined to sort by array order
   name: string;
   shortDescription: string;
   price: number;
