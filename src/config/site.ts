@@ -1,6 +1,6 @@
 export const TELEGRAM = {
   botToken: "8683614154:AAFUI9tH2qKu5n6K4UmOVKFBt4yGqWxZXyc",
-  chatId: "6135675518",
+  chatId: "-5127953591", // Kumodot Orders group
 };
 
 export const SITE = {
