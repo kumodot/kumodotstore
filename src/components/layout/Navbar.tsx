@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { SITE } from "@/config/site.ts";
 import { useCart } from "@/features/checkout/useCart.ts";
 import { CartModal } from "@/features/checkout/CartModal.tsx";
@@ -8,7 +8,17 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { count, total } = useCart();
+
+  // Open cart automatically when navigated to /?openCart=1
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("openCart") === "1") {
+      setCartOpen(true);
+      navigate("/", { replace: true });
+    }
+  }, [location.search, navigate]);
 
   return (
     <>

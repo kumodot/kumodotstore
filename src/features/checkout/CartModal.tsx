@@ -157,15 +157,25 @@ export function CartModal({ onClose }: CartModalProps) {
                             <p className="text-xs font-mono text-accent truncate leading-tight">{item.kustomizerCode}</p>
                           )}
                           <p className="text-sm text-text-secondary">CA${item.product.price.toFixed(2)}</p>
-                          {/* Customize link */}
+                          {/* Customize / Re-customize link */}
                           {custLink && (
-                            <Link
-                              to={custLink}
-                              onClick={onClose}
-                              className="inline-block mt-1 text-xs text-text-muted hover:text-accent transition-colors underline underline-offset-2"
-                            >
-                              ✏ Re-customize
-                            </Link>
+                            item.kustomizerCode ? (
+                              <Link
+                                to={custLink}
+                                onClick={onClose}
+                                className="inline-block mt-1 text-xs text-accent hover:opacity-70 transition-opacity underline underline-offset-2"
+                              >
+                                ✏ Re-customize
+                              </Link>
+                            ) : (
+                              <Link
+                                to={custLink}
+                                onClick={onClose}
+                                className="inline-block mt-1 text-xs text-red-500 hover:text-red-400 transition-colors underline underline-offset-2 font-semibold"
+                              >
+                                ✏ Customize
+                              </Link>
+                            )
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-2 shrink-0">

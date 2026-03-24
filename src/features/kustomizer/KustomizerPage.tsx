@@ -114,7 +114,7 @@ export function KustomizerPage() {
           onAddToCart={product ? () => {
             if (editLineId) {
               cartStore.updateLine(editLineId, product, kustomizer.formattedOrderCode);
-              navigate("/");
+              navigate("/?openCart=1");
             } else {
               cartStore.add(product, kustomizer.formattedOrderCode);
             }

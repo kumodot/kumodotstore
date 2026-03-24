@@ -106,7 +106,7 @@ export function VariationsPage() {
     const productWithDelta = { ...product, price: product.price + priceDelta };
     if (editLineId) {
       cartStore.updateLine(editLineId, productWithDelta, orderCode);
-      navigate("/");
+      navigate("/?openCart=1");
     } else {
       cartStore.add(productWithDelta, orderCode);
       setAdded(true);
