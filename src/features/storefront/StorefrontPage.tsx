@@ -106,10 +106,17 @@ function ProductCard({ product }: { product: Product }) {
             {product.price > 0 && (
               <button
                 onClick={handleAddToCart}
-                className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold
-                           rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap cursor-pointer"
+                title="Add to cart"
+                className={`w-9 h-9 flex items-center justify-center rounded-lg transition-all cursor-pointer
+                  ${added ? "bg-green-500/20" : "hover:bg-surface-hover"}`}
               >
-                {added ? "Added ✓" : "Add to Cart"}
+                {added ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                ) : (
+                  <img src="/add-to-bag_blue.png" alt="Add to cart" className="w-7 h-7 object-contain" />
+                )}
               </button>
             )}
           </div>
