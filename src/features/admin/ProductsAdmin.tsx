@@ -252,7 +252,7 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
             value={imagesInput}
             onChange={(e) => setImagesInput(e.target.value)}
             rows={3}
-            placeholder={"/kumodotstore/images/products/pokz-koii-01.jpg\n/kumodotstore/images/products/pokz-koii-02.jpg"}
+            placeholder={"/images/products/pokz-koii-01.jpg\n/images/products/pokz-koii-02.jpg"}
             className={`${inputCls} resize-none font-mono text-xs`}
           />
         </div>

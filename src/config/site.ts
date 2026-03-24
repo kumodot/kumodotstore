@@ -4,8 +4,8 @@ export const SITE = {
   etsyUrl: "https://www.etsy.com/shop/kumodotstore",
   githubUrl: "https://github.com/kumodot",
   instagramUrl: "https://www.instagram.com/kumodotdesign/",
-  logoUrl: "/kumodotstore/images/KUMODOT_LOGOTYPE_WHITE.png",
-  logoIconUrl: "/kumodotstore/images/Kumodot_LOGO_RED.png",
+  logoUrl: "/images/KUMODOT_LOGOTYPE_WHITE.png",
+  logoIconUrl: "/images/Kumodot_LOGO_RED.png",
   navItems: [
     { label: "Home", path: "/" },
     { label: "Kustomizer", path: "/kustomize" },
