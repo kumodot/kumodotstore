@@ -1,5 +1,6 @@
 import type { FilamentColor } from "@/types/index.ts";
 import type { Product } from "@/types/index.ts";
+import type { VariationConfig } from "@/types/index.ts";
 
 export function exportColorsTs(colors: FilamentColor[]): void {
   const lines = colors.map((c) => {
@@ -38,6 +39,7 @@ export function exportProductsTs(products: Product[]): void {
     }
     if (p.etsyUrl) fields.push(`    etsyUrl: ${JSON.stringify(p.etsyUrl)}`);
     if (p.kustomizerModelId) fields.push(`    kustomizerModelId: ${JSON.stringify(p.kustomizerModelId)}`);
+    if (p.variationConfigId) fields.push(`    variationConfigId: ${JSON.stringify(p.variationConfigId)}`);
     if (p.promotion) fields.push(`    promotion: { label: ${JSON.stringify(p.promotion.label)}, variant: ${JSON.stringify(p.promotion.variant)} }`);
     fields.push(`    inStock: ${p.inStock}`);
     return `  {\n${fields.join(",\n")},\n  }`;
@@ -50,6 +52,36 @@ ${lines.join(",\n")}
 ];
 `;
   downloadFile("products.ts", content);
+}
+
+export function exportVariationConfigsTs(configs: VariationConfig[]): void {
+  const lines = configs.map((c) => {
+    const groups = c.groups.map((g) => {
+      const options = g.options.map((o) => {
+        const parts = [
+          `id: ${JSON.stringify(o.id)}`,
+          `label: ${JSON.stringify(o.label)}`,
+          `priceDelta: ${o.priceDelta}`,
+        ];
+        if (o.imageUrl) parts.push(`imageUrl: ${JSON.stringify(o.imageUrl)}`);
+        return `          { ${parts.join(", ")} }`;
+      });
+      return `      {\n        id: ${JSON.stringify(g.id)},\n        name: ${JSON.stringify(g.name)},\n        required: ${g.required},\n        options: [\n${options.join(",\n")},\n        ],\n      }`;
+    });
+    return `  {\n    id: ${JSON.stringify(c.id)},\n    name: ${JSON.stringify(c.name)},\n    groups: [\n${groups.join(",\n")},\n    ],\n  }`;
+  });
+
+  const content = `import type { VariationConfig } from "@/types/index.ts";
+
+export const VARIATION_CONFIGS: VariationConfig[] = [
+${lines.join(",\n")}
+];
+
+export const VARIATION_CONFIGS_BY_ID: Record<string, VariationConfig> = Object.fromEntries(
+  VARIATION_CONFIGS.map((c) => [c.id, c])
+);
+`;
+  downloadFile("variationConfigs.ts", content);
 }
 
 function downloadFile(filename: string, content: string): void {

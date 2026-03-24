@@ -1,12 +1,13 @@
 import type { Product } from "@/types/index.ts";
 
 export interface CartItem {
+  lineId: string;
   product: Product;
   quantity: number;
   kustomizerCode?: string;
 }
 
-const STORAGE_KEY = "kumodot_cart_v1";
+const STORAGE_KEY = "kumodot_cart_v2";
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -40,39 +41,26 @@ export const cartStore = {
     return _items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
   },
 
+  // Always creates a new line — each item can have its own customization
   add(product: Product, kustomizerCode?: string) {
-    const existing = _items.find(
-      (i) => i.product.id === product.id && i.kustomizerCode === kustomizerCode
-    );
-    if (existing) {
-      _items = _items.map((i) =>
-        i === existing ? { ...i, quantity: i.quantity + 1 } : i
-      );
-    } else {
-      _items = [..._items, { product, quantity: 1, kustomizerCode }];
-    }
+    const lineId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    _items = [..._items, { lineId, product, quantity: 1, kustomizerCode }];
     save(_items);
     notify();
   },
 
-  updateQuantity(productId: string, kustomizerCode: string | undefined, qty: number) {
+  updateQuantity(lineId: string, qty: number) {
     if (qty <= 0) {
-      cartStore.remove(productId, kustomizerCode);
+      cartStore.removeByLineId(lineId);
       return;
     }
-    _items = _items.map((i) =>
-      i.product.id === productId && i.kustomizerCode === kustomizerCode
-        ? { ...i, quantity: qty }
-        : i
-    );
+    _items = _items.map((i) => i.lineId === lineId ? { ...i, quantity: qty } : i);
     save(_items);
     notify();
   },
 
-  remove(productId: string, kustomizerCode: string | undefined) {
-    _items = _items.filter(
-      (i) => !(i.product.id === productId && i.kustomizerCode === kustomizerCode)
-    );
+  removeByLineId(lineId: string) {
+    _items = _items.filter((i) => i.lineId !== lineId);
     save(_items);
     notify();
   },

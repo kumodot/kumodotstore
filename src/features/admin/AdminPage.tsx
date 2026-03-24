@@ -3,8 +3,9 @@ import { ColorsAdmin } from "./ColorsAdmin.tsx";
 import { ProductsAdmin } from "./ProductsAdmin.tsx";
 import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
 import { ShippingAdmin } from "./ShippingAdmin.tsx";
+import { ConfiguratorsAdmin } from "./ConfiguratorsAdmin.tsx";
 
-type Tab = "colors" | "products" | "templates" | "shipping";
+type Tab = "colors" | "products" | "templates" | "shipping" | "configurators";
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("colors");
@@ -23,7 +24,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
-        {(["colors", "products", "templates", "shipping"] as Tab[]).map((t) => (
+        {(["colors", "products", "templates", "shipping", "configurators"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -33,7 +34,11 @@ export function AdminPage() {
                 : "text-text-secondary hover:text-text-primary"
               }`}
           >
-            {t === "colors" ? "Filament Colors" : t === "products" ? "Products" : t === "templates" ? "Templates" : "Shipping"}
+            {t === "colors" ? "Filament Colors"
+              : t === "products" ? "Products"
+              : t === "templates" ? "Templates"
+              : t === "shipping" ? "Shipping"
+              : "Configurators"}
           </button>
         ))}
       </div>
@@ -42,6 +47,7 @@ export function AdminPage() {
       {tab === "products" && <ProductsAdmin />}
       {tab === "templates" && <TemplatesAdmin />}
       {tab === "shipping" && <ShippingAdmin />}
+      {tab === "configurators" && <ConfiguratorsAdmin />}
     </div>
   );
 }

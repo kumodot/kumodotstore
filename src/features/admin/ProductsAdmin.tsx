@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PRODUCTS } from "@/data/products.ts";
 import { CASE_MODELS } from "@/data/caseModels.ts";
+import { VARIATION_CONFIGS } from "@/data/variationConfigs.ts";
 import type { Product } from "@/types/index.ts";
 import { exportProductsTs } from "./exportUtils.ts";
 
@@ -72,6 +73,9 @@ function ProductRow({
         {product.kustomizerModelId && (
           <span className="ml-2 text-accent">⚙ kustomizer</span>
         )}
+        {product.variationConfigId && (
+          <span className="ml-2 text-accent">⚙ variations</span>
+        )}
       </td>
       <td className="py-3 px-3">
         <span className={`text-xs px-2 py-0.5 rounded font-medium ${product.inStock ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
@@ -123,6 +127,10 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
   const [kustomizerModel, setKustomizerModel] = useState(
     initial?.kustomizerModelId ?? CASE_MODELS[0].id
   );
+  const [hasVariationConfig, setHasVariationConfig] = useState(!!initial?.variationConfigId);
+  const [variationConfigId, setVariationConfigId] = useState(
+    initial?.variationConfigId ?? (VARIATION_CONFIGS[0]?.id ?? "")
+  );
   const [hasPromo, setHasPromo] = useState(!!initial?.promotion);
   const [promoLabel, setPromoLabel] = useState(initial?.promotion?.label ?? "NEW");
   const [promoVariant, setPromoVariant] = useState<typeof PROMOTION_VARIANTS[number]>(
@@ -144,8 +152,9 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
     const images = imagesInput.split("\n").map((s) => s.trim()).filter(Boolean);
     const promotion = hasPromo ? { label: promoLabel, variant: promoVariant } : undefined;
     const kustomizerModelId = hasKustomizer ? kustomizerModel : undefined;
+    const variationConfigIdValue = hasVariationConfig ? variationConfigId : undefined;
 
-    onSave({ ...form, id, slug: id, categories, images, promotion, kustomizerModelId });
+    onSave({ ...form, id, slug: id, categories, images, promotion, kustomizerModelId, variationConfigId: variationConfigIdValue });
   };
 
   const inputCls = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -231,6 +240,34 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
                 <option key={m.id} value={m.id}>{m.name} ({m.id})</option>
               ))}
             </select>
+          )}
+        </div>
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <label className="text-xs text-text-secondary">Variation Config</label>
+            <button
+              onClick={() => setHasVariationConfig((v) => !v)}
+              className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                hasVariationConfig ? "bg-accent/20 text-accent" : "bg-surface-elevated text-text-muted"
+              }`}
+            >
+              {hasVariationConfig ? "On" : "Off"}
+            </button>
+          </div>
+          {hasVariationConfig && (
+            VARIATION_CONFIGS.length > 0 ? (
+              <select
+                value={variationConfigId}
+                onChange={(e) => setVariationConfigId(e.target.value)}
+                className={`${inputCls} w-48`}
+              >
+                {VARIATION_CONFIGS.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-xs text-text-muted italic">No configurators defined yet. Add one in the Configurators tab.</p>
+            )
           )}
         </div>
         <div>

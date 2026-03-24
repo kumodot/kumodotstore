@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountries, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
@@ -22,6 +23,12 @@ interface CartModalProps {
   onClose: () => void;
 }
 
+function customizeLink(product: import("@/types/index.ts").Product): string | null {
+  if (product.kustomizerModelId) return `/kustomize/${product.kustomizerModelId}?product=${product.id}`;
+  if (product.variationConfigId) return `/configure/${product.variationConfigId}?product=${product.id}`;
+  return null;
+}
+
 export function CartModal({ onClose }: CartModalProps) {
   const { items, total } = useCart();
   const [step, setStep] = useState<Step>("cart");
@@ -33,7 +40,7 @@ export function CartModal({ onClose }: CartModalProps) {
   const shipping = region.freeShipping ? 0 : region.rate;
   const orderTotal = total + shipping;
 
-  const etsyUrl = items[0]?.product.etsyUrl; // fallback to first product's Etsy
+  const etsyUrl = items[0]?.product.etsyUrl;
 
   // Load PayPal SDK once
   useEffect(() => {
@@ -128,47 +135,61 @@ export function CartModal({ onClose }: CartModalProps) {
                 <p className="text-center text-text-muted py-10 text-sm">Your cart is empty.</p>
               ) : (
                 <div className="space-y-3">
-                  {items.map((item) => (
-                    <div key={`${item.product.id}-${item.kustomizerCode}`}
-                      className="flex items-center gap-3 bg-surface rounded-xl p-3">
-                      {item.product.images?.[0] && (
-                        <img src={item.product.images[0]} alt={item.product.name}
-                          className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-text-primary truncate">{item.product.name}</p>
-                        {item.kustomizerCode && (
-                          <p className="text-xs font-mono text-accent truncate">{item.kustomizerCode}</p>
+                  {items.map((item) => {
+                    const custLink = customizeLink(item.product);
+                    return (
+                      <div key={item.lineId}
+                        className="flex items-start gap-3 bg-surface rounded-xl p-3">
+                        {item.product.images?.[0] && (
+                          <img src={item.product.images[0]} alt={item.product.name}
+                            className="w-14 h-14 rounded-lg object-cover border border-border shrink-0 mt-0.5" />
                         )}
-                        <p className="text-sm text-text-secondary">CA${item.product.price.toFixed(2)}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text-primary truncate">{item.product.name}</p>
+                          {item.kustomizerCode && (
+                            <p className="text-xs font-mono text-accent truncate leading-tight">{item.kustomizerCode}</p>
+                          )}
+                          <p className="text-sm text-text-secondary">CA${item.product.price.toFixed(2)}</p>
+                          {/* Customize link */}
+                          {custLink && (
+                            <Link
+                              to={custLink}
+                              onClick={onClose}
+                              className="inline-block mt-1 text-xs text-text-muted hover:text-accent transition-colors underline underline-offset-2"
+                            >
+                              ✏ Re-customize
+                            </Link>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => cartStore.updateQuantity(item.lineId, item.quantity - 1)}
+                              className="w-6 h-6 rounded bg-surface-elevated border border-border text-text-primary
+                                         hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-center text-xs"
+                            >−</button>
+                            <span className="text-sm text-text-primary w-4 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => cartStore.updateQuantity(item.lineId, item.quantity + 1)}
+                              className="w-6 h-6 rounded bg-surface-elevated border border-border text-text-primary
+                                         hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-center text-xs"
+                            >+</button>
+                          </div>
+                          <button
+                            onClick={() => cartStore.removeByLineId(item.lineId)}
+                            className="text-text-muted hover:text-red-400 transition-colors cursor-pointer text-xs"
+                          >Remove</button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => cartStore.updateQuantity(item.product.id, item.kustomizerCode, item.quantity - 1)}
-                          className="w-7 h-7 rounded-lg bg-surface-elevated border border-border text-text-primary
-                                     hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-center text-sm"
-                        >−</button>
-                        <span className="text-sm text-text-primary w-4 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => cartStore.updateQuantity(item.product.id, item.kustomizerCode, item.quantity + 1)}
-                          className="w-7 h-7 rounded-lg bg-surface-elevated border border-border text-text-primary
-                                     hover:bg-surface-hover transition-colors cursor-pointer flex items-center justify-center text-sm"
-                        >+</button>
-                        <button
-                          onClick={() => cartStore.remove(item.product.id, item.kustomizerCode)}
-                          className="w-7 h-7 rounded-lg text-text-muted hover:text-red-400 transition-colors cursor-pointer
-                                     flex items-center justify-center text-sm ml-1"
-                        >✕</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
               {items.length > 0 && (
                 <div className="border-t border-border pt-4 space-y-3">
                   <div className="flex justify-between text-sm font-semibold text-text-primary">
-                    <span>Subtotal</span>
+                    <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} item{items.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""})</span>
                     <span>CA${total.toFixed(2)}</span>
                   </div>
                   <p className="text-xs text-text-muted">Shipping calculated at next step.</p>
@@ -239,12 +260,14 @@ export function CartModal({ onClose }: CartModalProps) {
           {/* STEP: Payment */}
           {step === "payment" && (
             <div className="space-y-4">
-              {/* Order summary */}
               <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
                 {items.map((item) => (
-                  <div key={`${item.product.id}-${item.kustomizerCode}`}
-                    className="flex justify-between text-text-secondary">
-                    <span className="truncate mr-2">{item.product.name} ×{item.quantity}</span>
+                  <div key={item.lineId} className="flex justify-between text-text-secondary">
+                    <span className="truncate mr-2">
+                      {item.product.name}
+                      {item.kustomizerCode && <span className="font-mono text-xs text-accent ml-1">[{item.kustomizerCode}]</span>}
+                      {item.quantity > 1 && <span className="ml-1">×{item.quantity}</span>}
+                    </span>
                     <span className="shrink-0">CA${(item.product.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
