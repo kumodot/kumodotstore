@@ -4,6 +4,7 @@ import { PRODUCTS } from "@/data/products.ts";
 import { SITE } from "@/config/site.ts";
 import { Carousel } from "@/components/ui/Carousel.tsx";
 import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
+import { CheckoutModal } from "@/features/checkout/CheckoutModal.tsx";
 import type { Product } from "@/types/index.ts";
 
 const PROMO_COLORS: Record<string, string> = {
@@ -21,6 +22,7 @@ function getImages(product: Product): string[] {
 
 function ProductCard({ product }: { product: Product }) {
   const images = getImages(product);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   return (
     <div className="relative bg-surface-card border border-border rounded-xl overflow-hidden
@@ -88,38 +90,30 @@ function ProductCard({ product }: { product: Product }) {
             {product.kustomizerModelId && (
               <Link
                 to={`/kustomize/${product.kustomizerModelId}`}
-                className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold
-                           rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap"
-              >
-                Customize
-              </Link>
-            )}
-            {product.etsyUrl ? (
-              <a
-                href={product.etsyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
                            text-text-secondary rounded-lg hover:bg-surface-hover
                            hover:text-text-primary transition-colors whitespace-nowrap"
               >
-                Etsy ↗
-              </a>
-            ) : (
+                Customize
+              </Link>
+            )}
+            {product.price > 0 && (
               <button
-                disabled
-                title="Add to cart — coming soon"
-                className="w-9 h-9 flex items-center justify-center rounded-lg
-                           bg-surface-elevated border border-border opacity-60
-                           cursor-not-allowed"
-                aria-label="Add to cart (coming soon)"
+                onClick={() => setCheckoutOpen(true)}
+                className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold
+                           rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap cursor-pointer"
               >
-                <svg fill="#e53e3e" width="18" height="18" viewBox="-1 0 19 19" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M16.417 9.579A7.917 7.917 0 1 1 8.5 1.662a7.917 7.917 0 0 1 7.917 7.917zm-3.34-2.323a.63.63 0 0 0-.628-.628H5.892l-.436-1a.384.384 0 0 0-.351-.23H3.68a.384.384 0 1 0 0 .768h1.173l1.785 4.096a.37.37 0 0 0-.087-.01 1.161 1.161 0 1 0 0 2.322h.042a.792.792 0 1 0 .864 0h3.452a.792.792 0 1 0 .864 0h.565a.384.384 0 1 0 0-.767H6.55a.393.393 0 0 1 0-.787.38.38 0 0 0 .098-.013l5.803-.602a.714.714 0 0 0 .625-.694z"/>
-                </svg>
+                Buy
               </button>
             )}
           </div>
+
+          {checkoutOpen && (
+            <CheckoutModal
+              product={product}
+              onClose={() => setCheckoutOpen(false)}
+            />
+          )}
         </div>
       </div>
     </div>
