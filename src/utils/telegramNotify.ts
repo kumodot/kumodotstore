@@ -58,6 +58,8 @@ export function buildChitChatsCsv(params: {
 
   // First item row includes recipient info + package info
   // Subsequent item rows for same order leave recipient fields blank (ChitChats groups by order_id)
+  const totalWeight = items.reduce((sum, item) => sum + item.quantity * 80, 0);
+
   const rows = items.map((item, idx) => {
     const isFirst = idx === 0;
     const desc = item.kustomizerCode
@@ -83,7 +85,7 @@ export function buildChitChatsCsv(params: {
       value_currency: "cad",
       item_hs_code: "4202.92.9400",
       item_steel_percentage: "", item_aluminum_percentage: "", item_copper_percentage: "",
-      item_weight: "20", item_weight_unit: "g",
+      item_weight: "80", item_weight_unit: "g",
       item_country_of_origin: "CA",
       item_manufacturer_contact: "Marcelo Souza",
       item_manufacturer_address_1: "1183 Potters Wheel Cres",
@@ -98,7 +100,7 @@ export function buildChitChatsCsv(params: {
       package_contents: isFirst ? "merchandise" : "",
       package_type: "",
       size_x: isFirst ? "9" : "", size_y: isFirst ? "10" : "", size_z: isFirst ? "1" : "", size_unit: isFirst ? "in" : "",
-      weight: isFirst ? "20" : "", weight_unit: isFirst ? "g" : "",
+      weight: isFirst ? String(totalWeight) : "", weight_unit: isFirst ? "g" : "",
       postage_type: "",
       signature_requested: "", insurance_requested: "",
       ship_date: isFirst ? "today" : "",
