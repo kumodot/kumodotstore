@@ -48,13 +48,14 @@ export function buildChitChatsCsv(params: {
   countryCode: string;
   phone: string;
   recipientName?: string;
+  email?: string;
   address1?: string;
   city?: string;
   provinceCode?: string;
   postalCode?: string;
 }): string {
   const { orderId, items, countryCode, phone,
-    recipientName = "", address1 = "", city = "",
+    recipientName = "", email = "", address1 = "", city = "",
     provinceCode = "", postalCode = "" } = params;
 
   // First item row includes recipient info + package info
@@ -76,7 +77,7 @@ export function buildChitChatsCsv(params: {
       postal_code: isFirst ? postalCode : "",
       country_code: countryCode,
       phone: isFirst ? phone : "",
-      customer_email: "",
+      customer_email: isFirst ? email : "",
       item_sku: item.product.id,
       item_description: desc,
       item_quantity: String(item.quantity),
@@ -176,6 +177,11 @@ export async function notifyOrderTelegram({
   countryCode,
   phone,
   recipientName,
+  email,
+  address1,
+  city,
+  provinceCode,
+  postalCode,
 }: {
   orderId: string;
   items: CartItem[];
@@ -184,6 +190,11 @@ export async function notifyOrderTelegram({
   countryCode: string;
   phone: string;
   recipientName?: string;
+  email?: string;
+  address1?: string;
+  city?: string;
+  provinceCode?: string;
+  postalCode?: string;
 }): Promise<void> {
   const date = new Date().toLocaleString("en-CA", {
     timeZone: "America/Toronto",
@@ -209,6 +220,7 @@ export async function notifyOrderTelegram({
     ``,
     `🌍 Ship to: ${countryName} (${countryCode})`,
     phone ? `📞 ${phone}` : null,
+    email ? `✉️ ${email}` : null,
     ``,
     `💰 Subtotal: CA$${total.toFixed(2)}`,
     `📮 Shipping: ${shippingLine}`,
@@ -219,7 +231,7 @@ export async function notifyOrderTelegram({
   await sendMessage(text);
 
   // Send ChitChats CSV
-  const csv = buildChitChatsCsv({ orderId, items, countryCode, phone, recipientName });
+  const csv = buildChitChatsCsv({ orderId, items, countryCode, phone, recipientName, email, address1, city, provinceCode, postalCode });
   const csvName = csvFilename(recipientName, countryCode);
   await sendDocument(csvName, csv, "text/csv", `📋 ChitChats CSV — ${orderId}`);
 
@@ -230,6 +242,7 @@ export async function notifyOrderTelegram({
       timeZone: "America/Toronto", day: "numeric", month: "short", year: "numeric",
     }),
     items, total, shipping, countryCode, phone, recipientName,
+    address1, city, provinceCode, postalCode,
     paymentMethod: "PayPal",
   });
   const slipName = csvName.replace(".csv", ".html");

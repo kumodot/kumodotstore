@@ -12,7 +12,7 @@ export const VARIATION_CONFIGS: VariationConfig[] = [
         options: [
           { id: "25deg", label: "25°", priceDelta: 0 },
           { id: "40deg", label: "40°", priceDelta: 0 },
-          { id: "combo", label: "Combo (25° + 40°)", priceDelta: 15 },
+          { id: "combo", label: "Combo (25° + 40°)", priceDelta: 18 },
         ],
       },
       {
@@ -21,11 +21,11 @@ export const VARIATION_CONFIGS: VariationConfig[] = [
         required: true,
         options: [
           { id: "olive", label: "Olive Green", priceDelta: 0 },
-          { id: "gray",  label: "Gray",        priceDelta: 0 },
+          { id: "gray", label: "Gray", priceDelta: 0 },
         ],
       },
     ],
-  },
+  }
 ];
 
 export const VARIATION_CONFIGS_BY_ID: Record<string, VariationConfig> = Object.fromEntries(

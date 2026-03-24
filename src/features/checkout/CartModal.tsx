@@ -5,6 +5,7 @@ import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
 import { notifyOrderTelegram, notifyShippingTelegram } from "@/utils/telegramNotify.ts";
+import { printOrderSlip } from "@/utils/orderSlip.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
@@ -76,15 +77,12 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (code: st
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute z-20 w-full mt-1 bg-surface-card border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto">
-            {/* Direct payment group */}
             <div className="px-3 pt-2 pb-1">
               <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Direct Payment</p>
             </div>
             {direct.map((c) => (
               <CountryOption key={c.code} c={c} selected={value === c.code} onSelect={() => { onChange(c.code); setOpen(false); }} variant="direct" />
             ))}
-
-            {/* VAT separator */}
             <div className="border-t border-border mx-3 my-1" />
             <div className="px-3 pb-1">
               <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">⚠ VAT Required — Order via Etsy</p>
@@ -99,6 +97,20 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (code: st
     </div>
   );
 }
+
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm text-text-secondary mb-1.5">
+        {label}
+        {required && <span className="ml-1 text-red-400">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls = "w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none";
 
 const PAYPAL_CLIENT_ID = "Ac4QBVY97qPStjhNr0zVXzAf2cgQ5jvx0TkTvH9VB7xfPV0CZO73bCcR93Tvkq17SOVacBNjxWjXfTFy";
 
@@ -133,6 +145,12 @@ export function CartModal({ onClose }: CartModalProps) {
   const { items, total } = useCart();
   const [step, setStep] = useState<Step>("cart");
   const [countryCode, setCountryCode] = useState("CA");
+  const [recipientName, setRecipientName] = useState("");
+  const [email, setEmail] = useState("");
+  const [address1, setAddress1] = useState("");
+  const [city, setCity] = useState("");
+  const [provinceCode, setProvinceCode] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [phone, setPhone] = useState("");
   const paypalRendered = useRef(false);
   const paypalContainerId = "cart-paypal-container";
@@ -143,6 +161,14 @@ export function CartModal({ onClose }: CartModalProps) {
   const orderTotal = total + shipping;
 
   const etsyUrl = items[0]?.product.etsyUrl;
+
+  const canProceedToPayment =
+    recipientName.trim() &&
+    email.trim() &&
+    address1.trim() &&
+    city.trim() &&
+    postalCode.trim() &&
+    (!requiresPhone || phone.trim());
 
   // Load PayPal SDK once
   useEffect(() => {
@@ -193,17 +219,28 @@ export function CartModal({ onClose }: CartModalProps) {
         onApprove: (_: unknown, actions: {
           order: { capture: () => Promise<{ id: string }> }
         }) => actions.order.capture().then((details) => {
-          notifyOrderTelegram({
+          const orderDate = new Date().toLocaleDateString("en-CA", {
+            timeZone: "America/Toronto", day: "numeric", month: "short", year: "numeric",
+          });
+          const slipParams = {
             orderId: details.id,
+            orderDate,
             items,
             total,
             shipping,
             countryCode,
             phone,
-          }).catch(() => {}); // fire-and-forget, don't block the user
+            recipientName,
+            address1,
+            city,
+            provinceCode,
+            postalCode,
+            paymentMethod: "PayPal",
+          };
+          notifyOrderTelegram({ ...slipParams, email }).catch(() => {});
           cartStore.clear();
           onClose();
-          alert(`Order confirmed! #${details.id}\nThank you for your purchase! 🎉`);
+          printOrderSlip(slipParams);
         }),
         onError: (err: unknown) => {
           console.error("PayPal error", err);
@@ -261,22 +298,15 @@ export function CartModal({ onClose }: CartModalProps) {
                             <p className="text-xs font-mono text-accent truncate leading-tight">{item.kustomizerCode}</p>
                           )}
                           <p className="text-sm text-text-secondary">CA${item.product.price.toFixed(2)}</p>
-                          {/* Customize / Re-customize link */}
                           {custLink && (
                             item.kustomizerCode ? (
-                              <Link
-                                to={custLink}
-                                onClick={onClose}
-                                className="inline-block mt-1 text-xs text-accent hover:opacity-70 transition-opacity underline underline-offset-2"
-                              >
+                              <Link to={custLink} onClick={onClose}
+                                className="inline-block mt-1 text-xs text-accent hover:opacity-70 transition-opacity underline underline-offset-2">
                                 ✏ Re-customize
                               </Link>
                             ) : (
-                              <Link
-                                to={custLink}
-                                onClick={onClose}
-                                className="inline-block mt-1 text-xs text-red-500 hover:text-red-400 transition-colors underline underline-offset-2 font-semibold"
-                              >
+                              <Link to={custLink} onClick={onClose}
+                                className="inline-block mt-1 text-xs text-red-500 hover:text-red-400 transition-colors underline underline-offset-2 font-semibold">
                                 ✏ Customize
                               </Link>
                             )
@@ -328,11 +358,8 @@ export function CartModal({ onClose }: CartModalProps) {
                             <div key={i.lineId} className="flex items-center justify-between gap-2">
                               <span className="text-xs text-text-secondary">{i.product.name}</span>
                               {link && (
-                                <Link
-                                  to={link}
-                                  onClick={onClose}
-                                  className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0"
-                                >
+                                <Link to={link} onClick={onClose}
+                                  className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0">
                                   Customize →
                                 </Link>
                               )}
@@ -363,27 +390,48 @@ export function CartModal({ onClose }: CartModalProps) {
                 <span>Shipped from <span className="text-text-secondary font-medium">Canada</span></span>
               </div>
 
-              <div>
-                <label className="block text-sm text-text-secondary mb-1.5">Ship to</label>
+              <Field label="Full name" required>
+                <input type="text" value={recipientName} onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="Jane Smith" className={inputCls} />
+              </Field>
+
+              <Field label="Email" required>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@example.com" className={inputCls} />
+                <p className="text-xs text-text-muted mt-1">Used to send your order receipt.</p>
+              </Field>
+
+              <Field label="Ship to" required>
                 <CountrySelect value={countryCode} onChange={setCountryCode} />
+              </Field>
+
+              <Field label="Address" required>
+                <input type="text" value={address1} onChange={(e) => setAddress1(e.target.value)}
+                  placeholder="123 Main St" className={inputCls} />
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="City" required>
+                  <input type="text" value={city} onChange={(e) => setCity(e.target.value)}
+                    placeholder="Toronto" className={inputCls} />
+                </Field>
+                <Field label="Province / State">
+                  <input type="text" value={provinceCode} onChange={(e) => setProvinceCode(e.target.value)}
+                    placeholder="ON" className={inputCls} />
+                </Field>
               </div>
 
+              <Field label="Postal / ZIP code" required>
+                <input type="text" value={postalCode} onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="M5V 1A1" className={inputCls} />
+              </Field>
+
               {requiresPhone && (
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1.5">
-                    Phone number
-                    <span className="ml-1.5 text-xs text-red-400">* required for this destination</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 416 555 0100"
-                    className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm
-                               text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
-                  />
-                  <p className="text-xs text-text-muted mt-1">Include country code. Required by carriers for delivery — used for shipping label only.</p>
-                </div>
+                <Field label="Phone number" required>
+                  <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 416 555 0100" className={inputCls} />
+                  <p className="text-xs text-text-muted mt-1">Include country code. Required by carriers for this destination.</p>
+                </Field>
               )}
 
               <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
@@ -411,7 +459,7 @@ export function CartModal({ onClose }: CartModalProps) {
                   notifyShippingTelegram({ items, total, shipping, countryCode, phone }).catch(() => {});
                   setStep("payment");
                 }}
-                disabled={requiresPhone && !phone.trim()}
+                disabled={!canProceedToPayment}
                 className="w-full py-3 bg-accent text-[#0f0f0f] font-semibold rounded-xl
                            hover:bg-accent-hover transition-colors cursor-pointer
                            disabled:opacity-40 disabled:cursor-not-allowed"

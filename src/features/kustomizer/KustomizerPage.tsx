@@ -33,7 +33,9 @@ export function KustomizerPage() {
     if (editCode) {
       kustomizer.applyCode(editCode);
     } else {
-      kustomizer.initWithFirstTemplate();
+      const default808 = templates.find((t) => t.name.includes("808"));
+      if (default808) kustomizer.applyCode(default808.code);
+      else kustomizer.initWithFirstTemplate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model?.id]);
