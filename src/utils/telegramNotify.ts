@@ -66,7 +66,7 @@ export function buildChitChatsCsv(params: {
 
     const fields: Record<string, string> = {
       order_id: orderId,
-      order_store: "kumodot",
+      order_store: "",
       name: isFirst ? recipientName : "",
       address_1: isFirst ? address1 : "",
       address_2: "",
@@ -250,7 +250,7 @@ export function downloadTestCsv(): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "order-TEST-001.csv";
+  a.download = csvFilename("Test Customer", "CA");
   a.click();
   URL.revokeObjectURL(url);
 }
