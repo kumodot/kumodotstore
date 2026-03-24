@@ -23,9 +23,16 @@ interface CartModalProps {
   onClose: () => void;
 }
 
-function customizeLink(product: import("@/types/index.ts").Product): string | null {
-  if (product.kustomizerModelId) return `/kustomize/${product.kustomizerModelId}?product=${product.id}`;
-  if (product.variationConfigId) return `/configure/${product.variationConfigId}?product=${product.id}`;
+function customizeLink(
+  product: import("@/types/index.ts").Product,
+  lineId: string,
+  kustomizerCode?: string
+): string | null {
+  const code = kustomizerCode ? `&code=${encodeURIComponent(kustomizerCode)}` : "";
+  if (product.kustomizerModelId)
+    return `/kustomize/${product.kustomizerModelId}?product=${product.id}&editLineId=${lineId}${code}`;
+  if (product.variationConfigId)
+    return `/configure/${product.variationConfigId}?product=${product.id}&editLineId=${lineId}${code}`;
   return null;
 }
 
@@ -136,7 +143,7 @@ export function CartModal({ onClose }: CartModalProps) {
               ) : (
                 <div className="space-y-3">
                   {items.map((item) => {
-                    const custLink = customizeLink(item.product);
+                    const custLink = customizeLink(item.product, item.lineId, item.kustomizerCode);
                     return (
                       <div key={item.lineId}
                         className="flex items-start gap-3 bg-surface rounded-xl p-3">

@@ -4,9 +4,10 @@ interface CodeOutputProps {
   code: string;
   onExportImage: () => void;
   onAddToCart?: () => void;
+  editMode?: boolean;
 }
 
-export function CodeOutput({ code, onExportImage, onAddToCart }: CodeOutputProps) {
+export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeOutputProps) {
   const [copied, setCopied] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -75,8 +76,8 @@ export function CodeOutput({ code, onExportImage, onAddToCart }: CodeOutputProps
                            : "bg-accent text-[#0f0f0f] hover:bg-accent-hover"
                          }`}
             >
-              {added ? "Added ✓" : (
-                <><img src="/add-to-bag_blue.png" alt="" className="w-5 h-5 object-contain" /> Add to Cart</>
+              {added ? (editMode ? "Updated ✓" : "Added ✓") : (
+                <><img src="/add-to-bag_blue.png" alt="" className="w-5 h-5 object-contain" /> {editMode ? "Update Cart" : "Add to Cart"}</>
               )}
             </button>
           )}

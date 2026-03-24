@@ -59,6 +59,14 @@ export const cartStore = {
     notify();
   },
 
+  updateLine(lineId: string, product: Product, kustomizerCode?: string) {
+    _items = _items.map((i) =>
+      i.lineId === lineId ? { ...i, product, kustomizerCode } : i
+    );
+    save(_items);
+    notify();
+  },
+
   removeByLineId(lineId: string) {
     _items = _items.filter((i) => i.lineId !== lineId);
     save(_items);

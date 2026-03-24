@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useSearchParams, Navigate } from "react-router-dom";
+import { useParams, useSearchParams, Navigate, useNavigate } from "react-router-dom";
 import { VARIATION_CONFIGS_BY_ID } from "@/data/variationConfigs.ts";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
@@ -65,14 +65,23 @@ function GroupSelector({
 export function VariationsPage() {
   const { configId } = useParams<{ configId: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const config = VARIATION_CONFIGS_BY_ID[configId ?? ""];
   const productId = searchParams.get("product");
+  const editLineId = searchParams.get("editLineId");
+  const editCode = searchParams.get("code");
   const product = productId ? PRODUCTS.find((p) => p.id === productId) : null;
 
-  const [selections, setSelections] = useState<Record<string, string>>(() =>
-    Object.fromEntries((config?.groups ?? []).map((g) => [g.id, g.options[0]?.id ?? ""]))
-  );
+  const [selections, setSelections] = useState<Record<string, string>>(() => {
+    // Pre-fill from editCode if editing — code is "opt1Id/opt2Id/..."
+    if (editCode && config) {
+      const parts = editCode.split("/");
+      const entries = config.groups.map((g, i) => [g.id, parts[i] ?? g.options[0]?.id ?? ""] as [string, string]);
+      return Object.fromEntries(entries);
+    }
+    return Object.fromEntries((config?.groups ?? []).map((g) => [g.id, g.options[0]?.id ?? ""]));
+  });
   const [added, setAdded] = useState(false);
 
   const priceDelta = useMemo(() => {
@@ -95,9 +104,14 @@ export function VariationsPage() {
   const handleAddToCart = () => {
     if (!product || !allSelected) return;
     const productWithDelta = { ...product, price: product.price + priceDelta };
-    cartStore.add(productWithDelta, orderCode);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+    if (editLineId) {
+      cartStore.updateLine(editLineId, productWithDelta, orderCode);
+      navigate("/");
+    } else {
+      cartStore.add(productWithDelta, orderCode);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1500);
+    }
   };
 
   return (
@@ -157,7 +171,7 @@ export function VariationsPage() {
                 }`}
             >
               {added ? "Added to Cart ✓" : (
-                <><img src="/add-to-bag_blue.png" alt="" className="w-5 h-5 object-contain" /> Add to Cart</>
+                <><img src="/add-to-bag_blue.png" alt="" className="w-5 h-5 object-contain" /> {editLineId ? "Update Cart" : "Add to Cart"}</>
               )}
             </button>
           )}

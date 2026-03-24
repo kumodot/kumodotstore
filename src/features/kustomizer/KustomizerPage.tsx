@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useParams, useSearchParams, Navigate } from "react-router-dom";
+import { useParams, useSearchParams, Navigate, useNavigate } from "react-router-dom";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
 import { MODELS_BY_ID, CASE_MODELS, DEFAULT_MODEL_ID } from "@/data/caseModels.ts";
@@ -16,9 +16,12 @@ import { ColorLegend } from "./components/ColorLegend.tsx";
 export function KustomizerPage() {
   const { modelId } = useParams<{ modelId: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const gridRef = useRef<HTMLDivElement>(null);
 
   const productId = searchParams.get("product");
+  const editLineId = searchParams.get("editLineId");
+  const editCode = searchParams.get("code");
   const product = productId ? PRODUCTS.find((p) => p.id === productId) : null;
 
   const model = MODELS_BY_ID[modelId ?? DEFAULT_MODEL_ID];
@@ -27,7 +30,11 @@ export function KustomizerPage() {
   const kustomizer = useKustomizer(model, templates);
 
   useEffect(() => {
-    kustomizer.initWithFirstTemplate();
+    if (editCode) {
+      kustomizer.applyCode(editCode);
+    } else {
+      kustomizer.initWithFirstTemplate();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model?.id]);
 
@@ -104,7 +111,15 @@ export function KustomizerPage() {
         <CodeOutput
           code={kustomizer.formattedOrderCode}
           onExportImage={handleExportImage}
-          onAddToCart={product ? () => cartStore.add(product, kustomizer.formattedOrderCode) : undefined}
+          onAddToCart={product ? () => {
+            if (editLineId) {
+              cartStore.updateLine(editLineId, product, kustomizer.formattedOrderCode);
+              navigate("/");
+            } else {
+              cartStore.add(product, kustomizer.formattedOrderCode);
+            }
+          } : undefined}
+          editMode={!!editLineId}
         />
 
         <ColorLegend />
