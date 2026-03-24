@@ -8,6 +8,7 @@ export interface ShippingRegion {
   freeShipping: boolean;
   enabled?: boolean;          // defaults to true when absent
   disabledMessage?: string;   // shown in dropdown when enabled = false
+  requirements?: string[];    // e.g. ["phone"] — fields collected at checkout
 }
 
 export const SHIPPING_REGIONS: ShippingRegion[] = [

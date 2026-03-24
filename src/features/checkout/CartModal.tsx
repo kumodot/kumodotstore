@@ -132,10 +132,12 @@ export function CartModal({ onClose }: CartModalProps) {
   const { items, total } = useCart();
   const [step, setStep] = useState<Step>("cart");
   const [countryCode, setCountryCode] = useState("CA");
+  const [phone, setPhone] = useState("");
   const paypalRendered = useRef(false);
   const paypalContainerId = "cart-paypal-container";
 
   const region = getRegionForCountry(countryCode);
+  const requiresPhone = region.requirements?.includes("phone") ?? false;
   const shipping = region.freeShipping ? 0 : region.rate;
   const orderTotal = total + shipping;
 
@@ -175,6 +177,7 @@ export function CartModal({ onClose }: CartModalProps) {
           order: { create: (o: unknown) => Promise<string> }
         }) => actions.order.create({
           purchase_units: [{
+            description: phone ? `Phone: ${phone}` : undefined,
             items: purchaseItems,
             amount: {
               currency_code: "CAD",
@@ -295,22 +298,51 @@ export function CartModal({ onClose }: CartModalProps) {
                 </div>
               )}
 
-              {items.length > 0 && (
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex justify-between text-sm font-semibold text-text-primary">
-                    <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} item{items.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""})</span>
-                    <span>CA${total.toFixed(2)}</span>
+              {items.length > 0 && (() => {
+                const uncustomized = items.filter(
+                  (i) => (i.product.kustomizerModelId || i.product.variationConfigId) && !i.kustomizerCode
+                );
+                return (
+                  <div className="border-t border-border pt-4 space-y-3">
+                    <div className="flex justify-between text-sm font-semibold text-text-primary">
+                      <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} item{items.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""})</span>
+                      <span>CA${total.toFixed(2)}</span>
+                    </div>
+                    <p className="text-xs text-text-muted">Shipping calculated at next step.</p>
+
+                    {uncustomized.length > 0 && (
+                      <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 space-y-1.5">
+                        <p className="text-xs font-semibold text-red-400">⚠ Not customized yet:</p>
+                        {uncustomized.map((i) => {
+                          const link = customizeLink(i.product, i.lineId);
+                          return (
+                            <div key={i.lineId} className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-text-secondary">{i.product.name}</span>
+                              {link && (
+                                <Link
+                                  to={link}
+                                  onClick={onClose}
+                                  className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0"
+                                >
+                                  Customize →
+                                </Link>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setStep("shipping")}
+                      className="w-full py-3 bg-accent text-[#0f0f0f] font-semibold rounded-xl
+                                 hover:bg-accent-hover transition-colors cursor-pointer"
+                    >
+                      Proceed to Shipping →
+                    </button>
                   </div>
-                  <p className="text-xs text-text-muted">Shipping calculated at next step.</p>
-                  <button
-                    onClick={() => setStep("shipping")}
-                    className="w-full py-3 bg-accent text-[#0f0f0f] font-semibold rounded-xl
-                               hover:bg-accent-hover transition-colors cursor-pointer"
-                  >
-                    Proceed to Shipping →
-                  </button>
-                </div>
-              )}
+                );
+              })()}
             </>
           )}
 
@@ -326,6 +358,24 @@ export function CartModal({ onClose }: CartModalProps) {
                 <label className="block text-sm text-text-secondary mb-1.5">Ship to</label>
                 <CountrySelect value={countryCode} onChange={setCountryCode} />
               </div>
+
+              {requiresPhone && (
+                <div>
+                  <label className="block text-sm text-text-secondary mb-1.5">
+                    Phone number
+                    <span className="ml-1.5 text-xs text-red-400">* required for this destination</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 416 555 0100"
+                    className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm
+                               text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+                  />
+                  <p className="text-xs text-text-muted mt-1">Include country code. Required by carriers for delivery — used for shipping label only.</p>
+                </div>
+              )}
 
               <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between text-text-secondary">
@@ -349,8 +399,10 @@ export function CartModal({ onClose }: CartModalProps) {
 
               <button
                 onClick={() => setStep("payment")}
+                disabled={requiresPhone && !phone.trim()}
                 className="w-full py-3 bg-accent text-[#0f0f0f] font-semibold rounded-xl
-                           hover:bg-accent-hover transition-colors cursor-pointer"
+                           hover:bg-accent-hover transition-colors cursor-pointer
+                           disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue to Payment →
               </button>

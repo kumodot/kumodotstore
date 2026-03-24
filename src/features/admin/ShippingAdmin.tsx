@@ -8,6 +8,7 @@ function exportShippingTs(regions: ShippingRegion[]): void {
     const extras: string[] = [];
     if (r.enabled === false) extras.push(`    enabled: false`);
     if (r.disabledMessage) extras.push(`    disabledMessage: ${JSON.stringify(r.disabledMessage)}`);
+    if (r.requirements?.length) extras.push(`    requirements: ${JSON.stringify(r.requirements)}`);
     return `  {
     id: ${JSON.stringify(r.id)},
     name: ${JSON.stringify(r.name)},
@@ -29,6 +30,7 @@ function exportShippingTs(regions: ShippingRegion[]): void {
   freeShipping: boolean;
   enabled?: boolean;
   disabledMessage?: string;
+  requirements?: string[];
 }
 
 export const SHIPPING_REGIONS: ShippingRegion[] = [
@@ -82,13 +84,18 @@ function RegionRow({
         }
       </td>
       <td className="py-3 px-4 text-sm text-text-secondary">
-        {region.freeShipping ? (
-          <span className="text-green-400">Free</span>
-        ) : region.etsyRedirect ? (
-          <span className="text-amber-400">→ Etsy</span>
-        ) : (
-          `CA$${region.rate.toFixed(2)}`
-        )}
+        <div className="flex flex-col gap-0.5">
+          {region.freeShipping ? (
+            <span className="text-green-400">Free</span>
+          ) : region.etsyRedirect ? (
+            <span className="text-amber-400">→ Etsy</span>
+          ) : (
+            <span>{`CA$${region.rate.toFixed(2)}`}</span>
+          )}
+          {region.requirements?.includes("phone") && (
+            <span className="text-xs text-text-muted">📞 phone req.</span>
+          )}
+        </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex gap-2 flex-wrap">
@@ -208,6 +215,32 @@ function RegionForm({
             placeholder="e.g. Visit our Etsy shop ↗"
             className={inputCls}
           />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs text-text-secondary mb-2">Checkout requirements</label>
+          <div className="flex flex-wrap gap-4">
+            {(["phone"] as const).map((req) => {
+              const checked = form.requirements?.includes(req) ?? false;
+              return (
+                <label key={req} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const reqs = form.requirements ? [...form.requirements] : [];
+                      set("requirements", e.target.checked
+                        ? [...reqs, req]
+                        : reqs.filter((r) => r !== req) || undefined
+                      );
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <span className="text-sm text-text-secondary">Require phone number</span>
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-xs text-text-muted mt-1">Fields shown to buyer at checkout when their country is in this region.</p>
         </div>
       </div>
 
