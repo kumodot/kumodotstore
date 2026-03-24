@@ -5,7 +5,7 @@ export const TEMPLATES: Record<string, ColorTemplate[]> = {
     { name: "ImPOstor", code: "RD_RD_RD_RD/RD_RD_RD_RD/MG_MG_MG_MG/MG_MG_MG_MG" },
     { name: "Linn LM-1 (1980)", code: "BK_BK_BK_BK/OR_OR_OR_OR/RD_RD_RD_RD/DG_DG_DG_DG" },
     { name: "Akai MPC 60 (1981)", code: "LG_LG_LG_LG/DG_DG_DG_DG/BL_BL_BL_BL/RD_RD_RD_RD" },
-    { name: "TR-808 PATTERN (1980)", code: "RD_RD_RD_RD/OR_OR_OR_OR/YE_YE_YE_YE/MG_MG_MG_MG" },
+    { name: "TR-808 PATTERN (1980)", code: "RD_RD_RD_RD/OR_OR_OR_OR/YE_YE_YE_YE/WH_WH_WH_WH" },
     { name: "TR-909 PATTERN (1983)", code: "DG_DG_DG_DG/WH_WH_WH_WH/OR_OR_OR_OR/LG_LG_LG_LG" },
     { name: "MAESTRO RHYTHM&SOUND (1968)", code: "BK_BK_BK_BK/OR_OR_OR_OR/IB_IB_IB_IB/YE_YE_YE_YE" },
     { name: "ALL PURPLE", code: "PU_PU_PU_PU/PU_PU_PU_PU/PU_PU_PU_PU/PU_PU_PU_PU" },

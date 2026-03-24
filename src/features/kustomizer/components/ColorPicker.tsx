@@ -12,18 +12,23 @@ interface ColorPickerProps {
 export function ColorPicker({ anchorEl, colorId, colorOptions, onSelect, onClose }: ColorPickerProps) {
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Position relative to anchor button
+  // Position relative to viewport (fixed positioning — no scroll offset needed)
   const rect = anchorEl.getBoundingClientRect();
-  const scrollY = window.scrollY;
-  const scrollX = window.scrollX;
-
-  let top = rect.bottom + scrollY + 8;
-  let left = rect.left + scrollX;
-
-  // Clamp to viewport width (picker is ~176px: 4 cols * 40px + padding)
   const pickerWidth = 176;
+  const pickerHeight = 176; // ~4 rows * 40px + padding
+
+  // Horizontal: clamp to viewport
+  let left = rect.left;
   if (left + pickerWidth > window.innerWidth - 8) {
-    left = window.innerWidth - pickerWidth - 8 + scrollX;
+    left = window.innerWidth - pickerWidth - 8;
+  }
+
+  // Vertical: open below by default, flip above if not enough space
+  let top: number;
+  if (rect.bottom + pickerHeight + 8 > window.innerHeight) {
+    top = rect.top - pickerHeight - 8; // open above
+  } else {
+    top = rect.bottom + 8; // open below
   }
 
   useEffect(() => {
