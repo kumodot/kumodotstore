@@ -33,15 +33,12 @@ export const SHIPPING_REGIONS: ShippingRegion[] = [
   {
     id: "europe",
     name: "Europe (EU + UK)",
-    countries: [
-      "AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU",
-      "IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES",
-      "SE","GB","NO","CH","IS","LI"
-    ],
+    countries: ["AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE","GB","NO","CH","IS","LI"],
     rate: 0,
     currency: "CAD",
     etsyRedirect: true,
     freeShipping: false,
+    requirements: ["phone"],
   },
   {
     id: "world",
@@ -56,7 +53,6 @@ export const SHIPPING_REGIONS: ShippingRegion[] = [
 
 export function getRegionForCountry(countryCode: string): ShippingRegion {
   const match = SHIPPING_REGIONS.find((r) => r.countries.includes(countryCode));
-  // fallback to catch-all (*) or last region
   return match ?? SHIPPING_REGIONS[SHIPPING_REGIONS.length - 1];
 }
 

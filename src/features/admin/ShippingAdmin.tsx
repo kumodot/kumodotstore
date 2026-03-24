@@ -38,11 +38,64 @@ ${lines.join(",\n")},
 ];
 
 export function getRegionForCountry(countryCode: string): ShippingRegion {
-  const specific = SHIPPING_REGIONS.find(
-    (r) => !r.countries.includes("*") && r.countries.includes(countryCode)
-  );
-  if (specific) return specific;
-  return SHIPPING_REGIONS.find((r) => r.countries.includes("*"))!;
+  const match = SHIPPING_REGIONS.find((r) => r.countries.includes(countryCode));
+  return match ?? SHIPPING_REGIONS[SHIPPING_REGIONS.length - 1];
+}
+
+// Master ISO country name map — used by admin and checkout dropdown
+export const ISO_COUNTRY_NAMES: Record<string, string> = {
+  AE: "United Arab Emirates", AT: "Austria", AU: "Australia", BE: "Belgium",
+  BG: "Bulgaria", BR: "Brazil", CA: "Canada", CH: "Switzerland", CY: "Cyprus",
+  CZ: "Czech Republic", DE: "Germany", DK: "Denmark", EE: "Estonia",
+  ES: "Spain", FI: "Finland", FR: "France", GB: "United Kingdom", GR: "Greece",
+  HK: "Hong Kong", HR: "Croatia", HU: "Hungary", IE: "Ireland", IL: "Israel",
+  IS: "Iceland", IT: "Italy", JP: "Japan", KR: "South Korea", LI: "Liechtenstein",
+  LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta", MX: "Mexico",
+  NF: "Norfolk Island", NL: "Netherlands", NO: "Norway", NZ: "New Zealand",
+  PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden", SG: "Singapore",
+  SI: "Slovenia", SK: "Slovakia", TW: "Taiwan", US: "United States", ZA: "South Africa",
+};
+
+// Returns sorted list of countries available for checkout based on regions
+export function getCheckoutCountries(): { code: string; name: string }[] {
+  const codes = new Set<string>();
+  for (const region of SHIPPING_REGIONS) {
+    for (const c of region.countries) {
+      if (c !== "*") codes.add(c);
+    }
+  }
+  return Array.from(codes)
+    .map((code) => ({ code, name: ISO_COUNTRY_NAMES[code] ?? code }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export interface CheckoutCountry {
+  code: string;
+  name: string;
+  enabled: boolean;
+  disabledMessage?: string;
+}
+
+// Returns countries split into two groups: direct payment vs VAT-required (Etsy redirect)
+export function getCheckoutCountriesGrouped(): { direct: CheckoutCountry[]; vat: CheckoutCountry[] } {
+  const direct: CheckoutCountry[] = [];
+  const vat: CheckoutCountry[] = [];
+  for (const region of SHIPPING_REGIONS) {
+    const regionEnabled = region.enabled !== false;
+    const list = region.countries
+      .filter((c) => c !== "*")
+      .map((code) => ({
+        code,
+        name: ISO_COUNTRY_NAMES[code] ?? code,
+        enabled: regionEnabled,
+        disabledMessage: regionEnabled ? undefined : region.disabledMessage,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (region.etsyRedirect) vat.push(...list);
+    else direct.push(...list);
+  }
+  direct.sort((a, b) => a.name.localeCompare(b.name));
+  return { direct, vat };
 }
 `;
 
