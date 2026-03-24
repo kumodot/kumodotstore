@@ -5,6 +5,9 @@ import type { ShippingRegion } from "@/data/shipping.ts";
 function exportShippingTs(regions: ShippingRegion[]): void {
   const lines = regions.map((r) => {
     const countries = JSON.stringify(r.countries);
+    const extras: string[] = [];
+    if (r.enabled === false) extras.push(`    enabled: false`);
+    if (r.disabledMessage) extras.push(`    disabledMessage: ${JSON.stringify(r.disabledMessage)}`);
     return `  {
     id: ${JSON.stringify(r.id)},
     name: ${JSON.stringify(r.name)},
@@ -12,7 +15,7 @@ function exportShippingTs(regions: ShippingRegion[]): void {
     rate: ${r.rate},
     currency: ${JSON.stringify(r.currency)},
     etsyRedirect: ${r.etsyRedirect},
-    freeShipping: ${r.freeShipping},
+    freeShipping: ${r.freeShipping},${extras.length ? "\n" + extras.join(",\n") + "," : ""}
   }`;
   });
 
@@ -24,6 +27,8 @@ function exportShippingTs(regions: ShippingRegion[]): void {
   currency: string;
   etsyRedirect: boolean;
   freeShipping: boolean;
+  enabled?: boolean;
+  disabledMessage?: string;
 }
 
 export const SHIPPING_REGIONS: ShippingRegion[] = [
@@ -52,14 +57,22 @@ function RegionRow({
   region,
   onEdit,
   onRemove,
+  onToggleEnabled,
 }: {
   region: ShippingRegion;
   onEdit: (r: ShippingRegion) => void;
   onRemove: (id: string) => void;
+  onToggleEnabled: (id: string) => void;
 }) {
+  const enabled = region.enabled !== false;
   return (
-    <tr className="border-b border-border hover:bg-surface-hover transition-colors">
-      <td className="py-3 px-4 font-medium text-text-primary text-sm">{region.name}</td>
+    <tr className={`border-b border-border transition-colors ${enabled ? "hover:bg-surface-hover" : "opacity-60 hover:bg-surface-hover"}`}>
+      <td className="py-3 px-4 text-sm">
+        <span className={`font-medium ${enabled ? "text-text-primary" : "text-text-muted line-through"}`}>{region.name}</span>
+        {!enabled && region.disabledMessage && (
+          <span className="ml-2 text-xs text-text-muted italic">"{region.disabledMessage}"</span>
+        )}
+      </td>
       <td className="py-3 px-4 text-xs text-text-muted font-mono">
         {region.countries.includes("*")
           ? <span className="text-amber-400">catch-all (*)</span>
@@ -78,7 +91,17 @@ function RegionRow({
         )}
       </td>
       <td className="py-3 px-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => onToggleEnabled(region.id)}
+            className={`text-xs px-3 py-1 rounded cursor-pointer transition-colors ${
+              enabled
+                ? "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                : "bg-surface-elevated text-text-muted hover:bg-surface-hover"
+            }`}
+          >
+            {enabled ? "Enabled" : "Disabled"}
+          </button>
           <button
             onClick={() => onEdit(region)}
             className="text-xs px-3 py-1 bg-surface-elevated border border-border
@@ -121,6 +144,7 @@ function RegionForm({
       currency: "CAD",
       etsyRedirect: false,
       freeShipping: false,
+      enabled: true,
     }
   );
   const [countriesInput, setCountriesInput] = useState(
@@ -163,7 +187,7 @@ function RegionForm({
           <label className="block text-xs text-text-secondary mb-1">Shipping Rate (CAD)</label>
           <input type="number" value={form.rate} onChange={(e) => set("rate", parseFloat(e.target.value) || 0)} min={0} step={0.01} disabled={form.freeShipping || form.etsyRedirect} className={`${inputCls} w-32 disabled:opacity-50`} />
         </div>
-        <div className="flex gap-4 items-end pb-1">
+        <div className="flex gap-4 items-end pb-1 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={form.freeShipping} onChange={(e) => { set("freeShipping", e.target.checked); if (e.target.checked) set("etsyRedirect", false); }} className="cursor-pointer" />
             <span className="text-sm text-text-secondary">Free shipping</span>
@@ -172,6 +196,18 @@ function RegionForm({
             <input type="checkbox" checked={form.etsyRedirect} onChange={(e) => { set("etsyRedirect", e.target.checked); if (e.target.checked) set("freeShipping", false); }} className="cursor-pointer" />
             <span className="text-sm text-text-secondary">Redirect to Etsy (VAT)</span>
           </label>
+        </div>
+        <div>
+          <label className="block text-xs text-text-secondary mb-1">
+            Disabled message <span className="text-text-muted">(shown in dropdown when region is disabled)</span>
+          </label>
+          <input
+            type="text"
+            value={form.disabledMessage ?? ""}
+            onChange={(e) => set("disabledMessage", e.target.value || undefined)}
+            placeholder="e.g. Visit our Etsy shop ↗"
+            className={inputCls}
+          />
         </div>
       </div>
 
@@ -195,6 +231,12 @@ export function ShippingAdmin() {
   const handleSave = (updated: ShippingRegion) => {
     setRegions((prev) => prev.map((r) => r.id === updated.id ? updated : r));
     setEditing(null);
+  };
+
+  const handleToggleEnabled = (id: string) => {
+    setRegions((prev) => prev.map((r) =>
+      r.id === id ? { ...r, enabled: r.enabled === false ? true : false } : r
+    ));
   };
 
   const handleAdd = (newR: ShippingRegion) => {
@@ -252,6 +294,7 @@ export function ShippingAdmin() {
                   region={region}
                   onEdit={setEditing}
                   onRemove={(id) => setRegions((prev) => prev.filter((r) => r.id !== id))}
+                  onToggleEnabled={handleToggleEnabled}
                 />
               )
             ))}

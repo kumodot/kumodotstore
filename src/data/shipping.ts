@@ -6,6 +6,8 @@ export interface ShippingRegion {
   currency: string;
   etsyRedirect: boolean;
   freeShipping: boolean;
+  enabled?: boolean;          // defaults to true when absent
+  disabledMessage?: string;   // shown in dropdown when enabled = false
 }
 
 export const SHIPPING_REGIONS: ShippingRegion[] = [
@@ -84,17 +86,30 @@ export function getCheckoutCountries(): { code: string; name: string }[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface CheckoutCountry {
+  code: string;
+  name: string;
+  enabled: boolean;
+  disabledMessage?: string;
+}
+
 // Returns countries split into two groups: direct payment vs VAT-required (Etsy redirect)
 export function getCheckoutCountriesGrouped(): {
-  direct: { code: string; name: string }[];
-  vat: { code: string; name: string }[];
+  direct: CheckoutCountry[];
+  vat: CheckoutCountry[];
 } {
-  const direct: { code: string; name: string }[] = [];
-  const vat: { code: string; name: string }[] = [];
+  const direct: CheckoutCountry[] = [];
+  const vat: CheckoutCountry[] = [];
   for (const region of SHIPPING_REGIONS) {
+    const regionEnabled = region.enabled !== false;
     const list = region.countries
       .filter((c) => c !== "*")
-      .map((code) => ({ code, name: ISO_COUNTRY_NAMES[code] ?? code }))
+      .map((code) => ({
+        code,
+        name: ISO_COUNTRY_NAMES[code] ?? code,
+        enabled: regionEnabled,
+        disabledMessage: regionEnabled ? undefined : region.disabledMessage,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
     if (region.etsyRedirect) vat.push(...list);
     else direct.push(...list);

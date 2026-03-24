@@ -3,9 +3,49 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
-import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
+import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
+
+function CountryOption({ c, selected, onSelect, variant }: {
+  c: CheckoutCountry;
+  selected: boolean;
+  onSelect: () => void;
+  variant: "direct" | "vat";
+}) {
+  if (!c.enabled) {
+    return (
+      <div className="px-3 py-2 flex items-center justify-between gap-2 opacity-50 cursor-not-allowed select-none">
+        <span className="text-sm text-text-muted">{c.name}</span>
+        {c.disabledMessage && (
+          <span className="text-xs text-text-muted italic shrink-0">{c.disabledMessage}</span>
+        )}
+      </div>
+    );
+  }
+  if (variant === "vat") {
+    return (
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
+          ${selected ? "bg-amber-500/10 text-amber-400" : "text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400"}`}
+      >
+        {c.name}
+      </button>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
+        ${selected ? "bg-accent/10 text-accent" : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"}`}
+    >
+      {c.name}
+    </button>
+  );
+}
 
 function CountrySelect({ value, onChange }: { value: string; onChange: (code: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -40,18 +80,7 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (code: st
               <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Direct Payment</p>
             </div>
             {direct.map((c) => (
-              <button
-                key={c.code}
-                type="button"
-                onClick={() => { onChange(c.code); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
-                  ${value === c.code
-                    ? "bg-accent/10 text-accent"
-                    : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                  }`}
-              >
-                {c.name}
-              </button>
+              <CountryOption key={c.code} c={c} selected={value === c.code} onSelect={() => { onChange(c.code); setOpen(false); }} variant="direct" />
             ))}
 
             {/* VAT separator */}
@@ -60,18 +89,7 @@ function CountrySelect({ value, onChange }: { value: string; onChange: (code: st
               <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">⚠ VAT Required — Order via Etsy</p>
             </div>
             {vat.map((c) => (
-              <button
-                key={c.code}
-                type="button"
-                onClick={() => { onChange(c.code); setOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
-                  ${value === c.code
-                    ? "bg-amber-500/10 text-amber-400"
-                    : "text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400"
-                  }`}
-              >
-                {c.name}
-              </button>
+              <CountryOption key={c.code} c={c} selected={value === c.code} onSelect={() => { onChange(c.code); setOpen(false); }} variant="vat" />
             ))}
             <div className="h-1" />
           </div>
