@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, useSearchParams, Navigate } from "react-router-dom";
+import { PRODUCTS } from "@/data/products.ts";
+import { cartStore } from "@/data/cartStore.ts";
 import { MODELS_BY_ID, CASE_MODELS, DEFAULT_MODEL_ID } from "@/data/caseModels.ts";
 import { TEMPLATES } from "@/data/templates.ts";
 import { colorsStore } from "@/data/colorsStore.ts";
@@ -13,7 +15,11 @@ import { ColorLegend } from "./components/ColorLegend.tsx";
 
 export function KustomizerPage() {
   const { modelId } = useParams<{ modelId: string }>();
+  const [searchParams] = useSearchParams();
   const gridRef = useRef<HTMLDivElement>(null);
+
+  const productId = searchParams.get("product");
+  const product = productId ? PRODUCTS.find((p) => p.id === productId) : null;
 
   const model = MODELS_BY_ID[modelId ?? DEFAULT_MODEL_ID];
   const templates = TEMPLATES[model?.id] ?? [];
@@ -98,6 +104,7 @@ export function KustomizerPage() {
         <CodeOutput
           code={kustomizer.formattedOrderCode}
           onExportImage={handleExportImage}
+          onAddToCart={product ? () => cartStore.add(product, kustomizer.formattedOrderCode) : undefined}
         />
 
         <ColorLegend />

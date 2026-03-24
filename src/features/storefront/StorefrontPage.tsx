@@ -95,7 +95,17 @@ function ProductCard({ product }: { product: Product }) {
           <div className="flex gap-2 shrink-0 items-center">
             {product.kustomizerModelId && (
               <Link
-                to={`/kustomize/${product.kustomizerModelId}`}
+                to={`/kustomize/${product.kustomizerModelId}?product=${product.id}`}
+                className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
+                           text-text-secondary rounded-lg hover:bg-surface-hover
+                           hover:text-text-primary transition-colors whitespace-nowrap"
+              >
+                Customize
+              </Link>
+            )}
+            {product.variationConfigId && (
+              <Link
+                to={`/configure/${product.variationConfigId}?product=${product.id}`}
                 className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
                            text-text-secondary rounded-lg hover:bg-surface-hover
                            hover:text-text-primary transition-colors whitespace-nowrap"

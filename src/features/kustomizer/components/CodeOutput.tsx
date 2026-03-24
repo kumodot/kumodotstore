@@ -3,10 +3,18 @@ import { useState } from "react";
 interface CodeOutputProps {
   code: string;
   onExportImage: () => void;
+  onAddToCart?: () => void;
 }
 
-export function CodeOutput({ code, onExportImage }: CodeOutputProps) {
+export function CodeOutput({ code, onExportImage, onAddToCart }: CodeOutputProps) {
   const [copied, setCopied] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToCart = () => {
+    onAddToCart?.();
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   // Split "AA_BB_CC_DD/EE_FF_GG_HH/..." into lines
   const lines = code.split("/");
@@ -57,6 +65,21 @@ export function CodeOutput({ code, onExportImage }: CodeOutputProps) {
           >
             Save Image
           </button>
+          {onAddToCart && (
+            <button
+              onClick={handleAddToCart}
+              className={`flex-1 sm:flex-none px-4 py-2 font-medium rounded-lg transition-colors
+                         whitespace-nowrap cursor-pointer flex items-center justify-center gap-2
+                         ${added
+                           ? "bg-green-500/20 text-green-400"
+                           : "bg-accent text-[#0f0f0f] hover:bg-accent-hover"
+                         }`}
+            >
+              {added ? "Added ✓" : (
+                <><img src="/add-to-bag_blue.png" alt="" className="w-5 h-5 object-contain" /> Add to Cart</>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

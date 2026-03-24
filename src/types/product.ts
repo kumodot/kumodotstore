@@ -10,7 +10,8 @@ export interface Product {
   images?: string[];      // multiple photos for carousel
   imageUrl?: string;     // legacy single image fallback
   etsyUrl?: string;
-  kustomizerModelId?: string;
+  kustomizerModelId?: string;  // grid-based customizer (POKZ cases)
+  variationConfigId?: string;  // variations-based customizer (Stands, etc.)
   promotion?: {
     label: string;
     variant: "new" | "sale" | "popular" | "limited";

@@ -21,8 +21,8 @@ export const PRODUCTS: Product[] = [
     inStock: true,
   },
   {
-    id: "placeholder-2",
-    slug: "placeholder-2",
+    id: "pokz-01",
+    slug: "pokz-01",
     sortOrder: 2,
     name: "POKZ_01 Case",
     shortDescription: "This is our most affordable version, yet still customizable.",
@@ -35,8 +35,8 @@ export const PRODUCTS: Product[] = [
     inStock: true,
   },
   {
-    id: "placeholder-3",
-    slug: "placeholder-3",
+    id: "pokz-02",
+    slug: "pokz-02",
     sortOrder: 3,
     name: "POKZ_02 Case",
     shortDescription: "Our classic signature case for any Pocket Operator, and also our best-seller! Customize your keys !",
@@ -49,8 +49,8 @@ export const PRODUCTS: Product[] = [
     inStock: true,
   },
   {
-    id: "placeholder-4",
-    slug: "placeholder-4",
+    id: "op1ogstand",
+    slug: "op1stand",
     sortOrder: 4,
     name: "OP-1 STANDS",
     shortDescription: "A perfect add-on for your OP-1 (OG) that increases usability, making it much more comfortable to use and view the screen.",
@@ -61,6 +61,7 @@ export const PRODUCTS: Product[] = [
       "/images/products/OP-1_StandsA-02.gif",
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/1071324709/kmdt-og-op-1-stands",
+    variationConfigId: "op1-stands",
     inStock: true,
   }
 ];
