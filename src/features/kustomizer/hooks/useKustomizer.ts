@@ -3,9 +3,13 @@ import type { CaseModel, ColorTemplate } from "@/types/index.ts";
 import { formatOrderCode, parseFormattedCode } from "../utils/colorSystem.ts";
 
 export function useKustomizer(model: CaseModel, templates: ColorTemplate[]) {
-  const [selectedColors, setSelectedColors] = useState<string[]>(() =>
-    Array(model.buttonCount).fill(model.defaultColorId)
-  );
+  const [selectedColors, setSelectedColors] = useState<string[]>(() => {
+    if (templates[0]) {
+      const codes = parseFormattedCode(templates[0].code);
+      if (codes.length >= model.buttonCount) return codes.slice(0, model.buttonCount);
+    }
+    return Array(model.buttonCount).fill(model.defaultColorId);
+  });
   const [activeButtonIndex, setActiveButtonIndex] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ColorTemplate | null>(
     templates[0] ?? null

@@ -35,18 +35,14 @@ interface TemplateEditorProps {
 
 function TemplateEditor({ modelId, initial, existingNames, onSave, onCancel }: TemplateEditorProps) {
   const model = CASE_MODELS.find((m) => m.id === modelId)!;
-  const kustomizer = useKustomizer(model, []);
-
-  // Initialize with existing template code or default
-  useState(() => {
-    if (initial) {
-      kustomizer.applyCode(initial.code);
-    } else {
-      kustomizer.reset();
-    }
-  });
+  const kustomizer = useKustomizer(
+    model,
+    initial ? [{ name: initial.name, code: initial.code }] : []
+  );
 
   const [name, setName] = useState(initial?.name ?? "");
+  const [pasteCode, setPasteCode] = useState("");
+  const [pasteError, setPasteError] = useState("");
   const [error, setError] = useState("");
 
   const colorOptions = colorsStore.getColors().filter((c) => c.available).map((c) => ({
@@ -100,10 +96,41 @@ function TemplateEditor({ modelId, initial, existingNames, onSave, onCancel }: T
         />
       </div>
 
-      <div className="flex items-center gap-3">
-        <code className="font-mono text-xs text-accent bg-surface px-3 py-1.5 rounded border border-border">
-          {kustomizer.formattedOrderCode}
-        </code>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <code className="font-mono text-xs text-accent bg-surface px-3 py-1.5 rounded border border-border">
+            {kustomizer.formattedOrderCode}
+          </code>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={pasteCode}
+            onChange={(e) => { setPasteCode(e.target.value); setPasteError(""); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const ok = kustomizer.applyCode(pasteCode.trim());
+                if (ok) { setPasteCode(""); setPasteError(""); }
+                else setPasteError("Invalid code");
+              }
+            }}
+            placeholder="Paste a code and press Enter"
+            className="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs
+                       font-mono text-text-primary focus:border-accent focus:outline-none w-72"
+          />
+          <button
+            onClick={() => {
+              const ok = kustomizer.applyCode(pasteCode.trim());
+              if (ok) { setPasteCode(""); setPasteError(""); }
+              else setPasteError("Invalid code");
+            }}
+            className="text-xs px-3 py-1.5 bg-surface-elevated border border-border text-text-secondary
+                       rounded-lg hover:bg-surface-hover transition-colors cursor-pointer"
+          >
+            Apply
+          </button>
+          {pasteError && <span className="text-xs text-red-400">{pasteError}</span>}
+        </div>
       </div>
 
       <div className="flex gap-2">
