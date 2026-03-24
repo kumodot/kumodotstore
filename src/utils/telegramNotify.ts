@@ -21,46 +21,146 @@ async function sendDocument(filename: string, content: string, caption?: string)
   });
 }
 
+// ChitChats Advanced CSV column order (matches their official template exactly)
+const CHITCHATS_HEADERS = [
+  "order_id","order_store","name","address_1","address_2","city","province_code",
+  "postal_code","country_code","phone","customer_email",
+  "item_sku","item_description","item_quantity","item_unit_value","value_currency",
+  "item_hs_code","item_steel_percentage","item_aluminum_percentage","item_copper_percentage",
+  "item_weight","item_weight_unit","item_country_of_origin",
+  "item_manufacturer_contact","item_manufacturer_address_1","item_manufacturer_address_2",
+  "item_manufacturer_city","item_manufacturer_postal_code","item_manufacturer_province_code",
+  "item_manufacturer_country_code","item_manufacturer_email","item_manufacturer_phone",
+  "vat_reference","duties_paid_requested","package_contents","package_type",
+  "size_x","size_y","size_z","size_unit","weight","weight_unit",
+  "postage_type","signature_requested","insurance_requested","ship_date",
+  "cheapest_postage_type_requested",
+];
+
+function csvRow(fields: string[]): string {
+  return fields.map((v) => `"${v.replace(/"/g, '""')}"`).join(",");
+}
+
 export function buildChitChatsCsv(params: {
   orderId: string;
   items: CartItem[];
   countryCode: string;
   phone: string;
+  recipientName?: string;
+  address1?: string;
+  city?: string;
+  provinceCode?: string;
+  postalCode?: string;
 }): string {
-  const { orderId, items, countryCode, phone } = params;
-  const countryName = ISO_COUNTRY_NAMES[countryCode] ?? countryCode;
+  const { orderId, items, countryCode, phone,
+    recipientName = "", address1 = "", city = "",
+    provinceCode = "", postalCode = "" } = params;
 
-  // ChitChats Advanced CSV headers
-  const headers = [
-    "order_id", "recipient_name", "recipient_address1", "recipient_address2",
-    "recipient_city", "recipient_province", "recipient_postal_code", "recipient_country",
-    "recipient_phone", "item_description", "item_quantity", "item_value",
-    "item_country_of_origin", "item_hs_code",
-  ];
-
-  const rows = items.map((item) => {
+  // First item row includes recipient info + package info
+  // Subsequent item rows for same order leave recipient fields blank (ChitChats groups by order_id)
+  const rows = items.map((item, idx) => {
+    const isFirst = idx === 0;
     const desc = item.kustomizerCode
       ? `${item.product.name} [${item.kustomizerCode}]`
       : item.product.name;
-    return [
-      orderId,
-      "", // recipient_name — filled from PayPal
-      "", // address1 — filled from PayPal
-      "", // address2
-      "", // city
-      "", // province
-      "", // postal
-      countryName,
-      phone,
-      desc,
-      String(item.quantity),
-      item.product.price.toFixed(2),
-      "CA", // country of origin
-      "",   // HS code — fill manually
-    ].map((v) => `"${v}"`).join(",");
+
+    const fields: Record<string, string> = {
+      order_id: orderId,
+      order_store: "kumodot",
+      name: isFirst ? recipientName : "",
+      address_1: isFirst ? address1 : "",
+      address_2: "",
+      city: isFirst ? city : "",
+      province_code: isFirst ? provinceCode : "",
+      postal_code: isFirst ? postalCode : "",
+      country_code: countryCode,
+      phone: isFirst ? phone : "",
+      customer_email: "",
+      item_sku: item.product.id,
+      item_description: desc,
+      item_quantity: String(item.quantity),
+      item_unit_value: item.product.price.toFixed(2),
+      value_currency: "cad",
+      item_hs_code: "",
+      item_steel_percentage: "", item_aluminum_percentage: "", item_copper_percentage: "",
+      item_weight: "", item_weight_unit: "",
+      item_country_of_origin: "CA",
+      item_manufacturer_contact: "", item_manufacturer_address_1: "",
+      item_manufacturer_address_2: "", item_manufacturer_city: "",
+      item_manufacturer_postal_code: "", item_manufacturer_province_code: "",
+      item_manufacturer_country_code: "", item_manufacturer_email: "",
+      item_manufacturer_phone: "",
+      vat_reference: "", duties_paid_requested: "",
+      package_contents: isFirst ? "merchandise" : "",
+      package_type: isFirst ? "parcel" : "",
+      size_x: "", size_y: "", size_z: "", size_unit: "",
+      weight: "", weight_unit: "",
+      postage_type: "",
+      signature_requested: "", insurance_requested: "",
+      ship_date: isFirst ? "today" : "",
+      cheapest_postage_type_requested: "",
+    };
+
+    return csvRow(CHITCHATS_HEADERS.map((h) => fields[h] ?? ""));
   });
 
-  return [headers.join(","), ...rows].join("\n");
+  return [CHITCHATS_HEADERS.join(","), ...rows].join("\n");
+}
+
+function csvFilename(recipientName: string | undefined, countryCode: string): string {
+  const dateStr = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).replace(/-/g, "");
+  const firstName = (recipientName ?? "").trim().split(/\s+/)[0].toUpperCase().replace(/[^A-Z0-9]/g, "") || "CUSTOMER";
+  return `ORDER_${dateStr}_${firstName}_${countryCode}.csv`;
+}
+
+export async function notifyShippingTelegram({
+  items,
+  total,
+  shipping,
+  countryCode,
+  phone,
+}: {
+  items: CartItem[];
+  total: number;
+  shipping: number;
+  countryCode: string;
+  phone: string;
+}): Promise<void> {
+  const date = new Date().toLocaleString("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const itemLines = items.map((item) => {
+    const qty = item.quantity > 1 ? ` ×${item.quantity}` : "";
+    return `• ${item.product.name}${qty}`;
+  }).join("\n");
+
+  const countryName = ISO_COUNTRY_NAMES[countryCode] ?? countryCode;
+  const shippingLine = shipping > 0 ? `CA$${shipping.toFixed(2)}` : "Free";
+
+  const text = [
+    `👀 *Checkout Started*`,
+    `📅 ${date}`,
+    ``,
+    `📦 *Items:*`,
+    itemLines,
+    ``,
+    `🌍 Ship to: ${countryName} (${countryCode})`,
+    phone ? `📞 ${phone}` : null,
+    ``,
+    `💰 Subtotal: CA$${total.toFixed(2)}`,
+    `📮 Shipping: ${shippingLine}`,
+    `💵 *Est. Total: CA$${(total + shipping).toFixed(2)}*`,
+    ``,
+    `_Waiting for payment confirmation…_`,
+  ].filter((l) => l !== null).join("\n");
+
+  await sendMessage(text);
 }
 
 export async function notifyOrderTelegram({
@@ -70,6 +170,7 @@ export async function notifyOrderTelegram({
   shipping,
   countryCode,
   phone,
+  recipientName,
 }: {
   orderId: string;
   items: CartItem[];
@@ -77,6 +178,7 @@ export async function notifyOrderTelegram({
   shipping: number;
   countryCode: string;
   phone: string;
+  recipientName?: string;
 }): Promise<void> {
   const date = new Date().toLocaleString("en-CA", {
     timeZone: "America/Toronto",
@@ -94,7 +196,7 @@ export async function notifyOrderTelegram({
   const shippingLine = shipping > 0 ? `CA$${shipping.toFixed(2)}` : "Free";
 
   const text = [
-    `🛍 *New Order — ${orderId}*`,
+    `✅ *Order Confirmed — ${orderId}*`,
     `📅 ${date}`,
     ``,
     `📦 *Items:*`,
@@ -112,8 +214,8 @@ export async function notifyOrderTelegram({
   await sendMessage(text);
 
   // Send ChitChats CSV as a file
-  const csv = buildChitChatsCsv({ orderId, items, countryCode, phone });
-  const filename = `order-${orderId}.csv`;
+  const csv = buildChitChatsCsv({ orderId, items, countryCode, phone, recipientName });
+  const filename = csvFilename(recipientName, countryCode);
   await sendDocument(filename, csv, `📋 ChitChats CSV — ${orderId}`);
 }
 
@@ -137,6 +239,11 @@ export function downloadTestCsv(): void {
     ],
     countryCode: "CA",
     phone: "+1 416 555 0100",
+    recipientName: "Test Customer",
+    address1: "123 Main St",
+    city: "Toronto",
+    provinceCode: "ON",
+    postalCode: "M5V 1A1",
   });
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });

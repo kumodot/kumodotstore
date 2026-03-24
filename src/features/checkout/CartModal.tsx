@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
-import { notifyOrderTelegram } from "@/utils/telegramNotify.ts";
+import { notifyOrderTelegram, notifyShippingTelegram } from "@/utils/telegramNotify.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
@@ -407,7 +407,10 @@ export function CartModal({ onClose }: CartModalProps) {
               </div>
 
               <button
-                onClick={() => setStep("payment")}
+                onClick={() => {
+                  notifyShippingTelegram({ items, total, shipping, countryCode, phone }).catch(() => {});
+                  setStep("payment");
+                }}
                 disabled={requiresPhone && !phone.trim()}
                 className="w-full py-3 bg-accent text-[#0f0f0f] font-semibold rounded-xl
                            hover:bg-accent-hover transition-colors cursor-pointer
