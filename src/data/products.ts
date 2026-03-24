@@ -31,6 +31,7 @@ export const PRODUCTS: Product[] = [
     categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/4308877925/kmdt-pokz-01-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
+    promotion: { label: "AFFORDABLE!", variant: "new" },
     inStock: true,
   },
   {
@@ -44,6 +45,7 @@ export const PRODUCTS: Product[] = [
     categories: ["PO"],
     etsyUrl: "https://www.etsy.com/ca/listing/1901389447/kmdt-pokz-02-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
+    promotion: { label: "BEST SELLER", variant: "new" },
     inStock: true,
   },
   {
