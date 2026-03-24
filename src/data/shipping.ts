@@ -83,3 +83,22 @@ export function getCheckoutCountries(): { code: string; name: string }[] {
     .map((code) => ({ code, name: ISO_COUNTRY_NAMES[code] ?? code }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+// Returns countries split into two groups: direct payment vs VAT-required (Etsy redirect)
+export function getCheckoutCountriesGrouped(): {
+  direct: { code: string; name: string }[];
+  vat: { code: string; name: string }[];
+} {
+  const direct: { code: string; name: string }[] = [];
+  const vat: { code: string; name: string }[] = [];
+  for (const region of SHIPPING_REGIONS) {
+    const list = region.countries
+      .filter((c) => c !== "*")
+      .map((code) => ({ code, name: ISO_COUNTRY_NAMES[code] ?? code }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (region.etsyRedirect) vat.push(...list);
+    else direct.push(...list);
+  }
+  direct.sort((a, b) => a.name.localeCompare(b.name));
+  return { direct, vat };
+}

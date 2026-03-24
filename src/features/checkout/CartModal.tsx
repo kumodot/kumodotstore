@@ -3,9 +3,83 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
-import { getRegionForCountry, getCheckoutCountries, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
+import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
 
-const CHECKOUT_COUNTRIES = getCheckoutCountries();
+const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
+
+function CountrySelect({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const { direct, vat } = CHECKOUT_COUNTRIES_GROUPED;
+  const currentName = ISO_COUNTRY_NAMES[value] ?? value;
+  const isVat = vat.some((c) => c.code === value);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm
+                   text-left flex items-center justify-between gap-2 cursor-pointer
+                   focus:border-accent focus:outline-none hover:border-border-light transition-colors"
+      >
+        <span className={isVat ? "text-amber-400" : "text-text-primary"}>{currentName}</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {isVat && <span className="text-xs text-amber-400">⚠ VAT</span>}
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`text-text-muted transition-transform ${open ? "rotate-180" : ""}`}>
+            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 w-full mt-1 bg-surface-card border border-border rounded-xl shadow-2xl max-h-64 overflow-y-auto">
+            {/* Direct payment group */}
+            <div className="px-3 pt-2 pb-1">
+              <p className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Direct Payment</p>
+            </div>
+            {direct.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => { onChange(c.code); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
+                  ${value === c.code
+                    ? "bg-accent/10 text-accent"
+                    : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                  }`}
+              >
+                {c.name}
+              </button>
+            ))}
+
+            {/* VAT separator */}
+            <div className="border-t border-border mx-3 my-1" />
+            <div className="px-3 pb-1">
+              <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">⚠ VAT Required — Order via Etsy</p>
+            </div>
+            {vat.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => { onChange(c.code); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-sm cursor-pointer transition-colors
+                  ${value === c.code
+                    ? "bg-amber-500/10 text-amber-400"
+                    : "text-amber-400/70 hover:bg-amber-500/10 hover:text-amber-400"
+                  }`}
+              >
+                {c.name}
+              </button>
+            ))}
+            <div className="h-1" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const PAYPAL_CLIENT_ID = "Ac4QBVY97qPStjhNr0zVXzAf2cgQ5jvx0TkTvH9VB7xfPV0CZO73bCcR93Tvkq17SOVacBNjxWjXfTFy";
 
@@ -232,16 +306,7 @@ export function CartModal({ onClose }: CartModalProps) {
 
               <div>
                 <label className="block text-sm text-text-secondary mb-1.5">Ship to</label>
-                <select
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm
-                             text-text-primary focus:border-accent focus:outline-none cursor-pointer"
-                >
-                  {CHECKOUT_COUNTRIES.map((c) => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
+                <CountrySelect value={countryCode} onChange={setCountryCode} />
               </div>
 
               <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
