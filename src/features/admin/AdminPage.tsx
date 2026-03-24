@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sendTelegramTest } from "@/utils/telegramNotify.ts";
 import { ColorsAdmin } from "./ColorsAdmin.tsx";
 import { ProductsAdmin } from "./ProductsAdmin.tsx";
 import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
@@ -7,19 +8,53 @@ import { ConfiguratorsAdmin } from "./ConfiguratorsAdmin.tsx";
 
 type Tab = "colors" | "products" | "templates" | "shipping" | "configurators";
 
+function TelegramTestButton() {
+  const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
+
+  const handleTest = async () => {
+    setState("sending");
+    try {
+      await sendTelegramTest();
+      setState("ok");
+    } catch {
+      setState("error");
+    }
+    setTimeout(() => setState("idle"), 3000);
+  };
+
+  return (
+    <button
+      onClick={handleTest}
+      disabled={state === "sending"}
+      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer shrink-0
+        ${state === "ok" ? "bg-green-500/20 text-green-400 border-green-500/30"
+          : state === "error" ? "bg-red-500/20 text-red-400 border-red-500/30"
+          : "bg-surface-elevated border-border text-text-secondary hover:bg-surface-hover"
+        }`}
+    >
+      {state === "sending" ? "Sending..." : state === "ok" ? "✓ Sent!" : state === "error" ? "✗ Failed" : "🔔 Test Telegram"}
+    </button>
+  );
+}
+
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("colors");
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-red-500">K</span><span className="text-accent">umodot</span>{" "}
-          <span className="text-text-primary">Admin</span>
-        </h1>
-        <p className="text-sm text-text-secondary mt-1">
-          Local admin — changes stay in your browser. Export to update source files.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-text-primary">
+              <span className="text-red-500">K</span><span className="text-accent">umodot</span>{" "}
+              <span className="text-text-primary">Admin</span>
+            </h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Local admin — changes stay in your browser. Export to update source files.
+            </p>
+          </div>
+          <TelegramTestButton />
+        </div>
       </div>
 
       {/* Tabs */}

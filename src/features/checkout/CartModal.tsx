@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
+import { notifyOrderTelegram } from "@/utils/telegramNotify.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
@@ -192,6 +193,14 @@ export function CartModal({ onClose }: CartModalProps) {
         onApprove: (_: unknown, actions: {
           order: { capture: () => Promise<{ id: string }> }
         }) => actions.order.capture().then((details) => {
+          notifyOrderTelegram({
+            orderId: details.id,
+            items,
+            total,
+            shipping,
+            countryCode,
+            phone,
+          }).catch(() => {}); // fire-and-forget, don't block the user
           cartStore.clear();
           onClose();
           alert(`Order confirmed! #${details.id}\nThank you for your purchase! 🎉`);
