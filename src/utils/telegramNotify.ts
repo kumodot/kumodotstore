@@ -21,7 +21,7 @@ async function sendDocument(filename: string, content: string, caption?: string)
   });
 }
 
-function buildChitChatsCsv(params: {
+export function buildChitChatsCsv(params: {
   orderId: string;
   items: CartItem[];
   countryCode: string;
@@ -115,6 +115,37 @@ export async function notifyOrderTelegram({
   const csv = buildChitChatsCsv({ orderId, items, countryCode, phone });
   const filename = `order-${orderId}.csv`;
   await sendDocument(filename, csv, `📋 ChitChats CSV — ${orderId}`);
+}
+
+// Download a fake ChitChats CSV for testing the import
+export function downloadTestCsv(): void {
+  const csv = buildChitChatsCsv({
+    orderId: "TEST-001",
+    items: [
+      {
+        lineId: "test-1",
+        product: { id: "pokz-02", slug: "pokz-02", name: "POKZ_02 Case", shortDescription: "", price: 65, currency: "CAD", categories: ["PO"], inStock: true },
+        quantity: 1,
+        kustomizerCode: "RD_BL_GN_YL/MG_WT_BK_OR/RD_BL_GN_YL/MG_WT_BK_OR",
+      },
+      {
+        lineId: "test-2",
+        product: { id: "op1ogstand", slug: "op1ogstand", name: "OP-1 Stands", shortDescription: "", price: 55, currency: "CAD", categories: ["OP-1"], inStock: true },
+        quantity: 1,
+        kustomizerCode: "combo/olive",
+      },
+    ],
+    countryCode: "CA",
+    phone: "+1 416 555 0100",
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "order-TEST-001.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // Send a test notification to verify the bot is working

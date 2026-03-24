@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sendTelegramTest } from "@/utils/telegramNotify.ts";
+import { sendTelegramTest, downloadTestCsv } from "@/utils/telegramNotify.ts";
 import { ColorsAdmin } from "./ColorsAdmin.tsx";
 import { ProductsAdmin } from "./ProductsAdmin.tsx";
 import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
@@ -53,7 +53,16 @@ export function AdminPage() {
               Local admin — changes stay in your browser. Export to update source files.
             </p>
           </div>
-          <TelegramTestButton />
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={downloadTestCsv}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
+                         text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              📋 Test CSV
+            </button>
+            <TelegramTestButton />
+          </div>
         </div>
       </div>
 
