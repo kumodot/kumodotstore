@@ -4,7 +4,7 @@ export interface ShippingRegion {
   countries: string[]; // ISO 3166-1 alpha-2 codes, or ["*"] for catch-all
   rate: number;        // in CAD
   currency: string;
-  etsyRedirect: boolean; // if true, redirect to Etsy instead of PayPal
+  etsyRedirect: boolean;
   freeShipping: boolean;
 }
 
@@ -43,7 +43,7 @@ export const SHIPPING_REGIONS: ShippingRegion[] = [
   {
     id: "world",
     name: "Rest of World",
-    countries: ["*"],
+    countries: ["AU","JP","NZ","MX","SG","KR","HK","TW","NF","ZA","IL","AE"],
     rate: 10,
     currency: "CAD",
     etsyRedirect: false,
@@ -52,53 +52,34 @@ export const SHIPPING_REGIONS: ShippingRegion[] = [
 ];
 
 export function getRegionForCountry(countryCode: string): ShippingRegion {
-  const specific = SHIPPING_REGIONS.find(
-    (r) => !r.countries.includes("*") && r.countries.includes(countryCode)
-  );
-  if (specific) return specific;
-  return SHIPPING_REGIONS.find((r) => r.countries.includes("*"))!;
+  const match = SHIPPING_REGIONS.find((r) => r.countries.includes(countryCode));
+  // fallback to catch-all (*) or last region
+  return match ?? SHIPPING_REGIONS[SHIPPING_REGIONS.length - 1];
 }
 
-// Full country list for the dropdown
-export const COUNTRIES: { code: string; name: string }[] = [
-  { code: "CA", name: "Canada" },
-  { code: "US", name: "United States" },
-  { code: "AU", name: "Australia" },
-  { code: "AT", name: "Austria" },
-  { code: "BE", name: "Belgium" },
-  { code: "BR", name: "Brazil" },
-  { code: "BG", name: "Bulgaria" },
-  { code: "HR", name: "Croatia" },
-  { code: "CY", name: "Cyprus" },
-  { code: "CZ", name: "Czech Republic" },
-  { code: "DK", name: "Denmark" },
-  { code: "EE", name: "Estonia" },
-  { code: "FI", name: "Finland" },
-  { code: "FR", name: "France" },
-  { code: "DE", name: "Germany" },
-  { code: "GR", name: "Greece" },
-  { code: "HU", name: "Hungary" },
-  { code: "IS", name: "Iceland" },
-  { code: "IE", name: "Ireland" },
-  { code: "IT", name: "Italy" },
-  { code: "JP", name: "Japan" },
-  { code: "LV", name: "Latvia" },
-  { code: "LI", name: "Liechtenstein" },
-  { code: "LT", name: "Lithuania" },
-  { code: "LU", name: "Luxembourg" },
-  { code: "MT", name: "Malta" },
-  { code: "MX", name: "Mexico" },
-  { code: "NL", name: "Netherlands" },
-  { code: "NZ", name: "New Zealand" },
-  { code: "NO", name: "Norway" },
-  { code: "PL", name: "Poland" },
-  { code: "PT", name: "Portugal" },
-  { code: "RO", name: "Romania" },
-  { code: "SK", name: "Slovakia" },
-  { code: "SI", name: "Slovenia" },
-  { code: "ES", name: "Spain" },
-  { code: "SE", name: "Sweden" },
-  { code: "CH", name: "Switzerland" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "OTHER", name: "Other country..." },
-];
+// Master ISO country name map — used by admin and checkout dropdown
+export const ISO_COUNTRY_NAMES: Record<string, string> = {
+  AE: "United Arab Emirates", AT: "Austria", AU: "Australia", BE: "Belgium",
+  BG: "Bulgaria", BR: "Brazil", CA: "Canada", CH: "Switzerland", CY: "Cyprus",
+  CZ: "Czech Republic", DE: "Germany", DK: "Denmark", EE: "Estonia",
+  ES: "Spain", FI: "Finland", FR: "France", GB: "United Kingdom", GR: "Greece",
+  HK: "Hong Kong", HR: "Croatia", HU: "Hungary", IE: "Ireland", IL: "Israel",
+  IS: "Iceland", IT: "Italy", JP: "Japan", KR: "South Korea", LI: "Liechtenstein",
+  LT: "Lithuania", LU: "Luxembourg", LV: "Latvia", MT: "Malta", MX: "Mexico",
+  NF: "Norfolk Island", NL: "Netherlands", NO: "Norway", NZ: "New Zealand",
+  PL: "Poland", PT: "Portugal", RO: "Romania", SE: "Sweden", SG: "Singapore",
+  SI: "Slovenia", SK: "Slovakia", TW: "Taiwan", US: "United States", ZA: "South Africa",
+};
+
+// Returns sorted list of countries available for checkout based on regions
+export function getCheckoutCountries(): { code: string; name: string }[] {
+  const codes = new Set<string>();
+  for (const region of SHIPPING_REGIONS) {
+    for (const c of region.countries) {
+      if (c !== "*") codes.add(c);
+    }
+  }
+  return Array.from(codes)
+    .map((code) => ({ code, name: ISO_COUNTRY_NAMES[code] ?? code }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}

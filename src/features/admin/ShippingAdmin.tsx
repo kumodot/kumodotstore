@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SHIPPING_REGIONS } from "@/data/shipping.ts";
+import { SHIPPING_REGIONS, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
 import type { ShippingRegion } from "@/data/shipping.ts";
 
 function exportShippingTs(regions: ShippingRegion[]): void {
@@ -61,7 +61,12 @@ function RegionRow({
     <tr className="border-b border-border hover:bg-surface-hover transition-colors">
       <td className="py-3 px-4 font-medium text-text-primary text-sm">{region.name}</td>
       <td className="py-3 px-4 text-xs text-text-muted font-mono">
-        {region.countries.includes("*") ? "All others" : region.countries.join(", ")}
+        {region.countries.includes("*")
+          ? <span className="text-amber-400">catch-all (*)</span>
+          : region.countries.map((c) => (
+              <span key={c} title={ISO_COUNTRY_NAMES[c] ?? c} className="mr-1">{c}</span>
+            ))
+        }
       </td>
       <td className="py-3 px-4 text-sm text-text-secondary">
         {region.freeShipping ? (
@@ -265,8 +270,11 @@ export function ShippingAdmin() {
 
       <div className="mt-6 p-4 bg-surface-card border border-border rounded-xl">
         <p className="text-xs text-text-muted">
-          <span className="text-text-secondary font-medium">Note:</span> The last region with <code className="font-mono">*</code> is the catch-all for any country not listed above.
-          Regions marked <span className="text-amber-400">→ Etsy</span> redirect buyers to your Etsy listing instead of PayPal (used for VAT countries).
+          <span className="text-text-secondary font-medium">Note:</span> Only countries explicitly listed in regions appear in the checkout dropdown — no surprises for buyers.
+          Regions marked <span className="text-amber-400">→ Etsy</span> redirect to Etsy (VAT countries).
+          Use 2-letter ISO codes —{" "}
+          <a href="https://www.iban.com/country-codes" target="_blank" rel="noopener noreferrer"
+             className="text-accent hover:underline">full list here ↗</a>.
           Export and replace <code className="font-mono">src/data/shipping.ts</code> to apply changes.
         </p>
       </div>

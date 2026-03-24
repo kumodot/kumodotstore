@@ -4,7 +4,7 @@ import { PRODUCTS } from "@/data/products.ts";
 import { SITE } from "@/config/site.ts";
 import { Carousel } from "@/components/ui/Carousel.tsx";
 import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
-import { CheckoutModal } from "@/features/checkout/CheckoutModal.tsx";
+import { cartStore } from "@/data/cartStore.ts";
 import type { Product } from "@/types/index.ts";
 
 const PROMO_COLORS: Record<string, string> = {
@@ -22,7 +22,13 @@ function getImages(product: Product): string[] {
 
 function ProductCard({ product }: { product: Product }) {
   const images = getImages(product);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToCart = () => {
+    cartStore.add(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
 
   return (
     <div className="relative bg-surface-card border border-border rounded-xl overflow-hidden
@@ -99,21 +105,14 @@ function ProductCard({ product }: { product: Product }) {
             )}
             {product.price > 0 && (
               <button
-                onClick={() => setCheckoutOpen(true)}
+                onClick={handleAddToCart}
                 className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold
                            rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap cursor-pointer"
               >
-                Buy
+                {added ? "Added ✓" : "Add to Cart"}
               </button>
             )}
           </div>
-
-          {checkoutOpen && (
-            <CheckoutModal
-              product={product}
-              onClose={() => setCheckoutOpen(false)}
-            />
-          )}
         </div>
       </div>
     </div>

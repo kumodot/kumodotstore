@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { Product } from "@/types/index.ts";
-import { COUNTRIES, getRegionForCountry } from "@/data/shipping.ts";
+import { getRegionForCountry, getCheckoutCountries, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
+
+const CHECKOUT_COUNTRIES = getCheckoutCountries();
 
 const PAYPAL_CLIENT_ID = "Ac4QBVY97qPStjhNr0zVXzAf2cgQ5jvx0TkTvH9VB7xfPV0CZO73bCcR93Tvkq17SOVacBNjxWjXfTFy";
 
@@ -131,7 +133,7 @@ export function CheckoutModal({ product, kustomizerCode, onClose }: CheckoutModa
                   className="w-full bg-surface border border-border rounded-lg px-3 py-2.5 text-sm
                              text-text-primary focus:border-accent focus:outline-none cursor-pointer"
                 >
-                  {COUNTRIES.map((c) => (
+                  {CHECKOUT_COUNTRIES.map((c) => (
                     <option key={c.code} value={c.code}>{c.name}</option>
                   ))}
                 </select>
@@ -170,7 +172,7 @@ export function CheckoutModal({ product, kustomizerCode, onClose }: CheckoutModa
                   <span>CA${product.price.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-text-secondary">
-                  <span>Shipping to {COUNTRIES.find(c => c.code === countryCode)?.name}</span>
+                  <span>Shipping to {ISO_COUNTRY_NAMES[countryCode] ?? countryCode}</span>
                   <span>{region.freeShipping ? "Free" : `CA$${shipping.toFixed(2)}`}</span>
                 </div>
                 <div className="border-t border-border pt-2 flex justify-between font-semibold text-text-primary">
