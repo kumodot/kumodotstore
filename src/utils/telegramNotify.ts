@@ -1,6 +1,7 @@
 import { TELEGRAM } from "@/config/site.ts";
 import type { CartItem } from "@/data/cartStore.ts";
 import { ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
+import { buildOrderSlipHtml } from "@/utils/orderSlip.ts";
 
 async function sendMessage(text: string): Promise<void> {
   await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
@@ -10,10 +11,10 @@ async function sendMessage(text: string): Promise<void> {
   });
 }
 
-async function sendDocument(filename: string, content: string, caption?: string): Promise<void> {
+async function sendDocument(filename: string, content: string, mimeType: string, caption?: string): Promise<void> {
   const form = new FormData();
   form.append("chat_id", TELEGRAM.chatId);
-  form.append("document", new Blob([content], { type: "text/csv" }), filename);
+  form.append("document", new Blob([content], { type: mimeType }), filename);
   if (caption) form.append("caption", caption);
   await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendDocument`, {
     method: "POST",
@@ -217,10 +218,22 @@ export async function notifyOrderTelegram({
   // Send text notification
   await sendMessage(text);
 
-  // Send ChitChats CSV as a file
+  // Send ChitChats CSV
   const csv = buildChitChatsCsv({ orderId, items, countryCode, phone, recipientName });
-  const filename = csvFilename(recipientName, countryCode);
-  await sendDocument(filename, csv, `📋 ChitChats CSV — ${orderId}`);
+  const csvName = csvFilename(recipientName, countryCode);
+  await sendDocument(csvName, csv, "text/csv", `📋 ChitChats CSV — ${orderId}`);
+
+  // Send order slip as HTML (open in browser → Print → Save as PDF)
+  const slipHtml = buildOrderSlipHtml({
+    orderId,
+    orderDate: new Date().toLocaleDateString("en-CA", {
+      timeZone: "America/Toronto", day: "numeric", month: "short", year: "numeric",
+    }),
+    items, total, shipping, countryCode, phone, recipientName,
+    paymentMethod: "PayPal",
+  });
+  const slipName = csvName.replace(".csv", ".html");
+  await sendDocument(slipName, slipHtml, "text/html", `🧾 Order Slip — ${orderId}`);
 }
 
 // Download a fake ChitChats CSV for testing the import
