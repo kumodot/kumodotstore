@@ -22,10 +22,9 @@ export function formatOrderCode(
 }
 
 export function parseFormattedCode(formattedCode: string): string[] {
-  const clean = formattedCode.replace(/_/g, "").replace(/\//g, "");
-  const codes: string[] = [];
-  for (let i = 0; i < clean.length; i += 2) {
-    codes.push(clean.substring(i, i + 2));
-  }
-  return codes;
+  // Normalize: remove newlines and spaces, then split by / and _
+  return formattedCode
+    .replace(/[\s]/g, "")   // strip whitespace and newlines
+    .split(/[/_]/)           // split on / or _
+    .filter((s) => s.length > 0);
 }
