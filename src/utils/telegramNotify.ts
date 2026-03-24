@@ -96,7 +96,7 @@ export function buildChitChatsCsv(params: {
       item_manufacturer_phone: "",
       vat_reference: "", duties_paid_requested: "",
       package_contents: isFirst ? "merchandise" : "",
-      package_type: isFirst ? "parcel" : "",
+      package_type: "",
       size_x: isFirst ? "9" : "", size_y: isFirst ? "10" : "", size_z: isFirst ? "1" : "", size_unit: isFirst ? "in" : "",
       weight: isFirst ? "20" : "", weight_unit: isFirst ? "g" : "",
       postage_type: "",
