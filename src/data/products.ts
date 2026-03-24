@@ -55,6 +55,9 @@ export const PRODUCTS: Product[] = [
     price: 40,
     currency: "CAD",
     categories: ["OP-1"],
+    images: [
+      "/images/products/OP-1_StandsA-02.gif",
+    ],
     etsyUrl: "https://www.etsy.com/ca/listing/1071324709/kmdt-og-op-1-stands",
     kustomizerModelId: "pokz-02",
     inStock: true,
