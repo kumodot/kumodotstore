@@ -196,23 +196,23 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       padding-top: 16px;
       border-top: 1px solid #ddd;
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 24px;
     }
     .footer-extras {
       display: flex;
-      align-items: center;
-      gap: 16px;
+      align-items: flex-end;
+      gap: 12px;
       flex: 1;
     }
-    .footer-extras img.qrcode { height: 72px; width: 72px; object-fit: contain; }
-    .footer-extras img.manual { height: 72px; object-fit: contain; }
+    .footer-extras img.qrcode { height: 140px; width: 140px; object-fit: contain; }
+    .footer-extras img.manual { height: 140px; object-fit: contain; }
     .footer-right {
       display: flex;
       flex-direction: column;
       align-items: flex-end;
       gap: 4px;
-      margin-left: auto;
+      padding-bottom: 4px;
     }
     .footer-logo { height: 24px; opacity: 0.5; }
     .footer-url { font-size: 11px; color: #aaa; }
