@@ -97,7 +97,7 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       font-size: 13px;
       color: #111;
       background: #fff;
-      padding: 32px 40px;
+      padding: 24px 40px;
       max-width: 720px;
       margin: 0 auto;
     }
@@ -105,8 +105,8 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       display: flex;
       align-items: center;
       gap: 14px;
-      margin-bottom: 32px;
-      padding-bottom: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
       border-bottom: 2px solid #111;
     }
     .header img { height: 44px; }
@@ -197,13 +197,12 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       border-top: 1px solid #ddd;
       display: flex;
       align-items: flex-end;
-      gap: 24px;
     }
     .footer-extras {
       display: flex;
       align-items: flex-end;
       gap: 4px;
-      flex: 1;
+      margin-right: auto;
     }
     .footer-extras img.qrcode { height: 270px; width: 270px; object-fit: contain; }
     .footer-extras img.manual { height: 270px; object-fit: contain; }
@@ -213,9 +212,16 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       align-items: flex-end;
       gap: 4px;
       padding-bottom: 4px;
+      padding-left: 16px;
     }
     .footer-logo { height: 24px; opacity: 0.5; }
     .footer-url { font-size: 11px; color: #aaa; }
+
+    /* Gift banner compact */
+    .gift-banner {
+      padding: 10px 14px;
+      margin-bottom: 16px;
+    }
 
     @media print {
       body { padding: 20px 28px; }
