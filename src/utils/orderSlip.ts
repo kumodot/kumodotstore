@@ -18,6 +18,9 @@ export interface OrderSlipParams {
   provinceCode?: string;
   postalCode?: string;
   paymentMethod?: string;
+  isGift?: boolean;
+  giftMessage?: string;
+  giftFrom?: string;
 }
 
 function formatAddress(p: OrderSlipParams): string {
@@ -45,6 +48,7 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
   const countryName = ISO_COUNTRY_NAMES[p.countryCode] ?? p.countryCode;
   const shippingLine = p.shipping > 0 ? `CA$${p.shipping.toFixed(2)}` : "Free";
   const itemCount = p.items.reduce((s, i) => s + i.quantity, 0);
+  const hidePrice = p.isGift === true;
 
   const itemRows = p.items.map((item) => {
     const customization = item.kustomizerCode
@@ -53,6 +57,7 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
     const img = item.product.images?.[0]
       ? `<img src="${baseUrl}${item.product.images[0]}" class="item-img" />`
       : `<div class="item-img-placeholder"></div>`;
+    const price = hidePrice ? "" : `<div class="item-price">${item.quantity} x CA$${item.product.price.toFixed(2)}</div>`;
     return `
       <div class="item-row">
         ${img}
@@ -60,9 +65,25 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
           <div class="item-name">${item.product.name}</div>
           ${customization}
         </div>
-        <div class="item-price">${item.quantity} x CA$${item.product.price.toFixed(2)}</div>
+        ${price}
       </div>`;
   }).join("");
+
+  const totalsSection = hidePrice ? "" : `
+      <div class="totals">
+        <div class="totals-row"><span>Item total</span><span>CA$${p.total.toFixed(2)}</span></div>
+        <div class="totals-row"><span>Shipping</span><span>${shippingLine}</span></div>
+        <div class="totals-row bold"><span>Order total</span><span>CA$${orderTotal.toFixed(2)}</span></div>
+      </div>`;
+
+  const giftBanner = p.isGift ? `
+  <div class="gift-banner">
+    <img src="${baseUrl}/images/gift.svg" class="gift-icon" alt="Gift" />
+    <div>
+      <div class="gift-title">🎁 You received a gift from <strong>${p.giftFrom ?? "a friend"}</strong>!</div>
+      ${p.giftMessage ? `<div class="gift-message">"${p.giftMessage}"</div>` : ""}
+    </div>
+  </div>` : "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -91,6 +112,22 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
     .header img { height: 44px; }
     .header-text h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
     .header-text p { font-size: 12px; color: #666; margin-top: 2px; }
+
+    /* Gift banner */
+    .gift-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: #fff8e1;
+      border: 1.5px solid #ffd54f;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+    .gift-icon { width: 32px; height: 32px; flex-shrink: 0; margin-top: 2px; }
+    .gift-title { font-size: 14px; font-weight: 600; color: #111; }
+    .gift-message { font-size: 13px; color: #555; margin-top: 4px; font-style: italic; }
+
     .body {
       display: grid;
       grid-template-columns: 200px 1fr;
@@ -152,17 +189,34 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       margin-top: 6px;
       padding-top: 8px;
     }
+
+    /* Footer */
     .footer {
-      margin-top: 40px;
+      margin-top: 32px;
       padding-top: 16px;
       border-top: 1px solid #ddd;
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      color: #888;
-      font-size: 11px;
+      gap: 24px;
     }
-    .footer-logo { height: 28px; opacity: 0.5; }
+    .footer-extras {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    .footer-extras img.qrcode { height: 72px; width: 72px; object-fit: contain; }
+    .footer-extras img.manual { height: 72px; object-fit: contain; }
+    .footer-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .footer-logo { height: 24px; opacity: 0.5; }
+    .footer-url { font-size: 11px; color: #aaa; }
+
     @media print {
       body { padding: 20px 28px; }
       @page { margin: 0.5cm; }
@@ -178,6 +232,8 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       <p>store.kumodot.art</p>
     </div>
   </div>
+
+  ${giftBanner}
 
   <div class="body">
     <div class="left">
@@ -207,27 +263,29 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
         <strong>Ship to</strong>
         <p>${countryName}</p>
       </div>
+      ${hidePrice ? "" : `
       <div class="meta-block">
         <strong>Payment method</strong>
         <p>${p.paymentMethod ?? "PayPal"}</p>
-      </div>
+      </div>`}
     </div>
 
     <div class="right">
       <div class="items-header">${itemCount} item${itemCount !== 1 ? "s" : ""}</div>
       ${itemRows}
-      <div class="totals">
-        <div class="totals-row"><span>Item total</span><span>CA$${p.total.toFixed(2)}</span></div>
-        <div class="totals-row"><span>Shipping</span><span>${shippingLine}</span></div>
-        <div class="totals-row bold"><span>Order total</span><span>CA$${orderTotal.toFixed(2)}</span></div>
-      </div>
+      ${totalsSection}
     </div>
   </div>
 
   <div class="footer">
-    <img src="${baseUrl}/images/KUMODOT_LOGOTYPE_BLACK.png" class="footer-logo" alt="kumodot" />
-    <span>Thank you for your order!</span>
-    <span>store.kumodot.art</span>
+    <div class="footer-extras">
+      <img src="${baseUrl}/images/QRCODE.png" class="qrcode" alt="QR Code" />
+      <img src="${baseUrl}/images/manual.png" class="manual" alt="Manual" />
+    </div>
+    <div class="footer-right">
+      <img src="${baseUrl}/images/KUMODOT_LOGOTYPE_BLACK.png" class="footer-logo" alt="kumodot" />
+      <span class="footer-url">store.kumodot.art</span>
+    </div>
   </div>
 
   <script>window.onload = () => { window.print(); }</script>
@@ -243,7 +301,7 @@ export function printOrderSlip(p: OrderSlipParams): void {
   win.document.close();
 }
 
-export function printTestOrderSlip(): void {
+export function printTestOrderSlip(gift = false): void {
   printOrderSlip({
     orderId: "TEST-001",
     orderDate: new Date().toLocaleDateString("en-CA", {
@@ -283,5 +341,8 @@ export function printTestOrderSlip(): void {
     provinceCode: "ON",
     postalCode: "M5V 1A1",
     paymentMethod: "PayPal",
+    isGift: gift,
+    giftMessage: gift ? "Happy Birthday! Hope you enjoy your new case 🎉" : undefined,
+    giftFrom: gift ? "Marcelo" : undefined,
   });
 }

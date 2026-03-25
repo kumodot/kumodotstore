@@ -153,6 +153,8 @@ export function CartModal({ onClose }: CartModalProps) {
   const [provinceCode, setProvinceCode] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [phone, setPhone] = useState("");
+  const [isGift, setIsGift] = useState(false);
+  const [giftMessage, setGiftMessage] = useState("");
   const paypalRendered = useRef(false);
   const paypalContainerId = "cart-paypal-container";
 
@@ -237,6 +239,9 @@ export function CartModal({ onClose }: CartModalProps) {
             provinceCode,
             postalCode,
             paymentMethod: "PayPal",
+            isGift,
+            giftMessage: isGift ? giftMessage : undefined,
+            giftFrom: isGift ? recipientName : undefined,
           };
           notifyOrderTelegram({ ...slipParams, email }).catch(() => {});
           sendOrderConfirmationEmail({ ...slipParams, email, orderDate }).catch(() => {});
@@ -389,7 +394,7 @@ export function CartModal({ onClose }: CartModalProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs text-text-muted bg-surface rounded-lg px-3 py-2">
                 <span>🇨🇦</span>
-                <span>Shipped from <span className="text-text-secondary font-medium">Canada</span></span>
+                <span>Shipped from <span className="text-text-secondary font-medium">Canada</span> — fill in the <span className="text-text-secondary font-medium">shipping label</span> details below</span>
               </div>
 
               <Field label="Full name" required>
@@ -435,6 +440,32 @@ export function CartModal({ onClose }: CartModalProps) {
                   <p className="text-xs text-text-muted mt-1">Include country code. Required by carriers for this destination.</p>
                 </Field>
               )}
+
+              {/* Gift option */}
+              <div className="bg-surface rounded-xl p-3 space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isGift}
+                    onChange={(e) => setIsGift(e.target.checked)}
+                    className="w-4 h-4 accent-accent cursor-pointer"
+                  />
+                  <span className="text-sm text-text-primary">🎁 This is a gift</span>
+                </label>
+                {isGift && (
+                  <div>
+                    <label className="block text-xs text-text-secondary mb-1.5">Gift message <span className="text-text-muted">(optional — printed on the slip)</span></label>
+                    <textarea
+                      value={giftMessage}
+                      onChange={(e) => setGiftMessage(e.target.value)}
+                      placeholder="Happy Birthday! Hope you enjoy it 🎉"
+                      rows={2}
+                      className="w-full bg-surface-elevated border border-border rounded-lg px-3 py-2 text-sm
+                                 text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none resize-none"
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="bg-surface rounded-lg p-4 space-y-2 text-sm">
                 <div className="flex justify-between text-text-secondary">

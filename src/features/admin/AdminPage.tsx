@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { sendTelegramTest, downloadTestCsv } from "@/utils/telegramNotify.ts";
 import { printTestOrderSlip } from "@/utils/orderSlip.ts";
+
 import { ColorsAdmin } from "./ColorsAdmin.tsx";
 import { ProductsAdmin } from "./ProductsAdmin.tsx";
 import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
@@ -56,11 +57,18 @@ export function AdminPage() {
           </div>
           <div className="flex gap-2 shrink-0">
             <button
-              onClick={printTestOrderSlip}
+              onClick={() => printTestOrderSlip(false)}
               className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
                          text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
             >
               🧾 Test Slip
+            </button>
+            <button
+              onClick={() => printTestOrderSlip(true)}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
+                         text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              🎁 Test Gift Slip
             </button>
             <button
               onClick={downloadTestCsv}
