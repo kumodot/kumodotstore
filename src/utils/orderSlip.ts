@@ -205,8 +205,8 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       gap: 12px;
       flex: 1;
     }
-    .footer-extras img.qrcode { height: 140px; width: 140px; object-fit: contain; }
-    .footer-extras img.manual { height: 140px; object-fit: contain; }
+    .footer-extras img.qrcode { height: 300px; width: 300px; object-fit: contain; }
+    .footer-extras img.manual { height: 300px; object-fit: contain; }
     .footer-right {
       display: flex;
       flex-direction: column;
