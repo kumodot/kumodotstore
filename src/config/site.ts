@@ -3,6 +3,12 @@ export const TELEGRAM = {
   chatId: import.meta.env.VITE_TELEGRAM_CHAT_ID as string,
 };
 
+export const EMAILJS = {
+  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string,
+  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID as string,
+  templateClient: import.meta.env.VITE_EMAILJS_TEMPLATE_CLIENT as string,
+};
+
 export const SITE = {
   name: "kumodot store",
   tagline: "Custom cases for your Pocket Operator",

@@ -6,6 +6,7 @@ import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
 import { notifyOrderTelegram, notifyShippingTelegram } from "@/utils/telegramNotify.ts";
 import { printOrderSlip } from "@/utils/orderSlip.ts";
+import { sendOrderConfirmationEmail } from "@/utils/emailNotify.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
@@ -238,6 +239,7 @@ export function CartModal({ onClose }: CartModalProps) {
             paymentMethod: "PayPal",
           };
           notifyOrderTelegram({ ...slipParams, email }).catch(() => {});
+          sendOrderConfirmationEmail({ ...slipParams, email, orderDate }).catch(() => {});
           cartStore.clear();
           onClose();
           printOrderSlip(slipParams);
