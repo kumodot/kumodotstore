@@ -132,7 +132,7 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       display: grid;
       grid-template-columns: 200px 1fr;
       gap: 32px;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
     }
     .meta-block { margin-bottom: 20px; }
     .meta-block strong {
@@ -192,8 +192,8 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
 
     /* Footer */
     .footer {
-      margin-top: 32px;
-      padding-top: 16px;
+      margin-top: 8px;
+      padding-top: 8px;
       border-top: 1px solid #ddd;
       display: flex;
       align-items: flex-end;
