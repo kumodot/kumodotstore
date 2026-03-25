@@ -128,12 +128,16 @@ export async function notifyShippingTelegram({
   shipping,
   countryCode,
   phone,
+  recipientName,
+  email,
 }: {
   items: CartItem[];
   total: number;
   shipping: number;
   countryCode: string;
   phone: string;
+  recipientName?: string;
+  email?: string;
 }): Promise<void> {
   const date = new Date().toLocaleString("en-CA", {
     timeZone: "America/Toronto",
@@ -153,11 +157,14 @@ export async function notifyShippingTelegram({
     `👀 *Checkout Started*`,
     `📅 ${date}`,
     ``,
+    recipientName ? `👤 ${recipientName}` : null,
+    email ? `✉️ ${email}` : null,
+    phone ? `📞 ${phone}` : null,
+    ``,
     `📦 *Items:*`,
     itemLines,
     ``,
     `🌍 Ship to: ${countryName} (${countryCode})`,
-    phone ? `📞 ${phone}` : null,
     ``,
     `💰 Subtotal: CA$${total.toFixed(2)}`,
     `📮 Shipping: ${shippingLine}`,

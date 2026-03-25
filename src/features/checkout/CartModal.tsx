@@ -458,7 +458,7 @@ export function CartModal({ onClose }: CartModalProps) {
 
               <button
                 onClick={() => {
-                  notifyShippingTelegram({ items, total, shipping, countryCode, phone }).catch(() => {});
+                  notifyShippingTelegram({ items, total, shipping, countryCode, phone, recipientName, email }).catch(() => {});
                   setStep("payment");
                 }}
                 disabled={!canProceedToPayment}
