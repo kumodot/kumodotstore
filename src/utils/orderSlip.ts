@@ -197,11 +197,10 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       border-top: 1px solid #ddd;
       display: flex;
       align-items: flex-end;
-      justify-content: flex-start;
       gap: 0;
     }
-    .footer img.qrcode { height: 270px; width: 270px; object-fit: contain; margin-left: -40px; }
-    .footer img.manual { height: 270px; object-fit: contain; margin-left: -8px; }
+    .footer img.qrcode { height: 270px; width: auto; display: block; }
+    .footer img.manual { height: 270px; width: auto; display: block; margin-left: 2px; }
     .footer-right {
       display: flex;
       flex-direction: column;
