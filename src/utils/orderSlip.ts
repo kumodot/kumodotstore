@@ -197,15 +197,10 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
       border-top: 1px solid #ddd;
       display: flex;
       align-items: flex-end;
-    }
-    .footer-extras {
-      display: flex;
-      align-items: flex-end;
       gap: 4px;
-      margin-right: auto;
     }
-    .footer-extras img.qrcode { height: 270px; width: 270px; object-fit: contain; }
-    .footer-extras img.manual { height: 270px; object-fit: contain; }
+    .footer img.qrcode { height: 270px; width: 270px; object-fit: contain; }
+    .footer img.manual { height: 270px; object-fit: contain; margin-right: auto; }
     .footer-right {
       display: flex;
       flex-direction: column;
@@ -284,10 +279,8 @@ export function buildOrderSlipHtml(p: OrderSlipParams, baseUrl = SITE_URL): stri
   </div>
 
   <div class="footer">
-    <div class="footer-extras">
-      <img src="${baseUrl}/images/QRCODE.png" class="qrcode" alt="QR Code" />
-      <img src="${baseUrl}/images/manual.png" class="manual" alt="Manual" />
-    </div>
+    <img src="${baseUrl}/images/QRCODE.png" class="qrcode" alt="QR Code" />
+    <img src="${baseUrl}/images/manual.png" class="manual" alt="Manual" />
     <div class="footer-right">
       <img src="${baseUrl}/images/KUMODOT_LOGOTYPE_BLACK.png" class="footer-logo" alt="kumodot" />
       <span class="footer-url">store.kumodot.art</span>
