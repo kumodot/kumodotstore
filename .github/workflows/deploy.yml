@@ -30,6 +30,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_TELEGRAM_BOT_TOKEN: ${{ secrets.VITE_TELEGRAM_BOT_TOKEN }}
+          VITE_TELEGRAM_CHAT_ID: ${{ secrets.VITE_TELEGRAM_CHAT_ID }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
