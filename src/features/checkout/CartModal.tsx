@@ -4,9 +4,8 @@ import { Link } from "react-router-dom";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
-import { notifyOrderTelegram, notifyShippingTelegram } from "@/utils/telegramNotify.ts";
+import { notifyShippingTelegram } from "@/utils/telegramNotify.ts";
 import { printOrderSlip } from "@/utils/orderSlip.ts";
-import { sendOrderConfirmationEmail } from "@/utils/emailNotify.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
@@ -261,9 +260,6 @@ export function CartModal({ onClose }: CartModalProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(backendPayload),
           }).catch(() => {});
-          // Fallback (fire-and-forget)
-          notifyOrderTelegram({ ...slipParams, email }).catch(() => {});
-          sendOrderConfirmationEmail({ ...slipParams, email, orderDate }).catch(() => {});
           cartStore.clear();
           onClose();
           printOrderSlip(slipParams);
