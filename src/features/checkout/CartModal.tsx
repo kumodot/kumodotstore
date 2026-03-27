@@ -243,6 +243,25 @@ export function CartModal({ onClose }: CartModalProps) {
             giftMessage: isGift ? giftMessage : undefined,
             giftFrom: isGift ? recipientName : undefined,
           };
+          // Backend (Apps Script) — primary
+          const backendPayload = {
+            secret: import.meta.env.VITE_BACKEND_SECRET,
+            ...slipParams,
+            email,
+            items: items.map((i) => ({
+              name: i.product.name,
+              code: i.kustomizerCode ?? "",
+              quantity: i.quantity,
+              price: i.product.price,
+            })),
+          };
+          fetch("https://script.google.com/macros/s/AKfycbxhsJ06oFvxy0xtqKgPjm38YTpt1l_je09LVT3M6-ZJMAP_eYvcwExLpD-oLZ22wE-z/exec", {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(backendPayload),
+          }).catch(() => {});
+          // Fallback (fire-and-forget)
           notifyOrderTelegram({ ...slipParams, email }).catch(() => {});
           sendOrderConfirmationEmail({ ...slipParams, email, orderDate }).catch(() => {});
           cartStore.clear();
