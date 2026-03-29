@@ -4,6 +4,8 @@ import { CASE_MODELS } from "@/data/caseModels.ts";
 import { VARIATION_CONFIGS } from "@/data/variationConfigs.ts";
 import type { Product } from "@/types/index.ts";
 import { exportProductsTs } from "./exportUtils.ts";
+import { usePersistedState, readDraft } from "./usePersistedState.ts";
+import type { VariationConfig } from "@/types/index.ts";
 
 const PROMOTION_VARIANTS = ["new", "sale", "popular", "limited"] as const;
 
@@ -114,6 +116,7 @@ interface ProductFormProps {
 
 function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProps) {
   const isNew = !initial;
+  const liveConfigs = readDraft<VariationConfig[]>("configurators", VARIATION_CONFIGS);
   const [form, setForm] = useState<Product>(
     initial ?? { id: "", slug: "", ...EMPTY_PRODUCT }
   );
@@ -129,7 +132,7 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
   );
   const [hasVariationConfig, setHasVariationConfig] = useState(!!initial?.variationConfigId);
   const [variationConfigId, setVariationConfigId] = useState(
-    initial?.variationConfigId ?? (VARIATION_CONFIGS[0]?.id ?? "")
+    initial?.variationConfigId ?? (liveConfigs[0]?.id ?? "")
   );
   const [hasPromo, setHasPromo] = useState(!!initial?.promotion);
   const [promoLabel, setPromoLabel] = useState(initial?.promotion?.label ?? "NEW");
@@ -255,13 +258,13 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
             </button>
           </div>
           {hasVariationConfig && (
-            VARIATION_CONFIGS.length > 0 ? (
+            liveConfigs.length > 0 ? (
               <select
                 value={variationConfigId}
                 onChange={(e) => setVariationConfigId(e.target.value)}
                 className={`${inputCls} w-48`}
               >
-                {VARIATION_CONFIGS.map((c) => (
+                {liveConfigs.map((c) => (
                   <option key={c.id} value={c.id}>{c.name} ({c.id})</option>
                 ))}
               </select>
@@ -347,8 +350,9 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
 }
 
 export function ProductsAdmin() {
-  const [products, setProducts] = useState<Product[]>(() =>
-    [...PRODUCTS].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
+  const [products, setProducts, { clearDraft, hasDraft }] = usePersistedState<Product[]>(
+    "products",
+    () => [...PRODUCTS].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
   );
   const [editing, setEditing] = useState<Product | null>(null);
   const [adding, setAdding] = useState(false);
@@ -400,14 +404,30 @@ export function ProductsAdmin() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-text-secondary">{products.length} products</p>
-        <button
-          onClick={() => exportProductsTs(products)}
-          className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
-                     hover:bg-accent-hover transition-colors cursor-pointer"
-        >
-          Export products.ts ↓
-        </button>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-text-secondary">{products.length} products</p>
+          {hasDraft && (
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Draft restored</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { exportProductsTs(products); clearDraft(); }}
+            className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
+                       hover:bg-accent-hover transition-colors cursor-pointer"
+          >
+            Export products.ts ↓
+          </button>
+          {hasDraft && (
+            <button
+              onClick={() => { if (confirm("Discard draft and reload from source?")) { clearDraft(); location.reload(); } }}
+              className="text-xs px-3 py-2 bg-surface-elevated border border-border text-text-muted rounded-lg
+                         hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              Discard draft
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-surface-card border border-border rounded-xl overflow-hidden mb-4 overflow-x-auto">

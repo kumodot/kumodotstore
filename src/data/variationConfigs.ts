@@ -25,6 +25,21 @@ export const VARIATION_CONFIGS: VariationConfig[] = [
         ],
       },
     ],
+  },
+  {
+    id: "POKz_SHIELD_Color",
+    name: "POKz_SHIELD Color",
+    groups: [
+      {
+        id: "color",
+        name: "Color",
+        required: true,
+        options: [
+          { id: "clear", label: "CLEAR", priceDelta: 0 },
+          { id: "orange-clear", label: "ORANGE  CLEAR ", priceDelta: 0 },
+        ],
+      },
+    ],
   }
 ];
 

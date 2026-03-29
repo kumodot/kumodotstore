@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SHIPPING_REGIONS, ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
 import type { ShippingRegion } from "@/data/shipping.ts";
+import { usePersistedState } from "./usePersistedState.ts";
 
 function exportShippingTs(regions: ShippingRegion[]): void {
   const lines = regions.map((r) => {
@@ -310,7 +311,10 @@ function RegionForm({
 }
 
 export function ShippingAdmin() {
-  const [regions, setRegions] = useState<ShippingRegion[]>([...SHIPPING_REGIONS]);
+  const [regions, setRegions, { clearDraft, hasDraft }] = usePersistedState<ShippingRegion[]>(
+    "shipping",
+    () => [...SHIPPING_REGIONS]
+  );
   const [editing, setEditing] = useState<ShippingRegion | null>(null);
   const [adding, setAdding] = useState(false);
 
@@ -333,13 +337,29 @@ export function ShippingAdmin() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-text-secondary">{regions.length} regions</p>
-        <button
-          onClick={() => exportShippingTs(regions)}
-          className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg hover:bg-accent-hover transition-colors cursor-pointer"
-        >
-          Export shipping.ts ↓
-        </button>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-text-secondary">{regions.length} regions</p>
+          {hasDraft && (
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Draft restored</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { exportShippingTs(regions); clearDraft(); }}
+            className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg hover:bg-accent-hover transition-colors cursor-pointer"
+          >
+            Export shipping.ts ↓
+          </button>
+          {hasDraft && (
+            <button
+              onClick={() => { if (confirm("Discard draft and reload from source?")) { clearDraft(); location.reload(); } }}
+              className="text-xs px-3 py-2 bg-surface-elevated border border-border text-text-muted rounded-lg
+                         hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              Discard draft
+            </button>
+          )}
+        </div>
       </div>
 
       {adding && (

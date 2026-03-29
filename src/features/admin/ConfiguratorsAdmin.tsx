@@ -2,6 +2,7 @@ import { useState } from "react";
 import { VARIATION_CONFIGS } from "@/data/variationConfigs.ts";
 import type { VariationConfig, VariationGroup, VariationOption } from "@/types/index.ts";
 import { exportVariationConfigsTs } from "./exportUtils.ts";
+import { usePersistedState } from "./usePersistedState.ts";
 
 const inputCls =
   "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -27,7 +28,7 @@ function OptionRow({
         value={option.label}
         onChange={(e) => {
           const label = e.target.value;
-          onChange({ ...option, label, id: option.id || slugify(label) });
+          onChange({ ...option, label, id: slugify(label) });
         }}
         placeholder="Label (e.g. Olive Green)"
         className="flex-1 bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
@@ -94,7 +95,7 @@ function GroupEditor({
           value={group.name}
           onChange={(e) => {
             const name = e.target.value;
-            onChange({ ...group, name, id: group.id || slugify(name) });
+            onChange({ ...group, name, id: slugify(name) });
           }}
           placeholder="Group name (e.g. Color)"
           className="flex-1 bg-surface-elevated border border-border rounded-lg px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none font-medium"
@@ -274,7 +275,10 @@ function ConfigEditor({
 
 // ── Main tab ───────────────────────────────────────────────────────────────────
 export function ConfiguratorsAdmin() {
-  const [configs, setConfigs] = useState<VariationConfig[]>([...VARIATION_CONFIGS]);
+  const [configs, setConfigs, { clearDraft, hasDraft }] = usePersistedState<VariationConfig[]>(
+    "configurators",
+    () => [...VARIATION_CONFIGS]
+  );
   const [editing, setEditing] = useState<VariationConfig | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -309,14 +313,30 @@ export function ConfiguratorsAdmin() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-text-secondary">{configs.length} configurator{configs.length !== 1 ? "s" : ""}</p>
-        <button
-          onClick={() => exportVariationConfigsTs(configs)}
-          className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
-                     hover:bg-accent-hover transition-colors cursor-pointer"
-        >
-          Export variationConfigs.ts ↓
-        </button>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-text-secondary">{configs.length} configurator{configs.length !== 1 ? "s" : ""}</p>
+          {hasDraft && (
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Draft restored</span>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { exportVariationConfigsTs(configs); clearDraft(); }}
+            className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
+                       hover:bg-accent-hover transition-colors cursor-pointer"
+          >
+            Export variationConfigs.ts ↓
+          </button>
+          {hasDraft && (
+            <button
+              onClick={() => { if (confirm("Discard draft and reload from source?")) { clearDraft(); location.reload(); } }}
+              className="text-xs px-3 py-2 bg-surface-elevated border border-border text-text-muted rounded-lg
+                         hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              Discard draft
+            </button>
+          )}
+        </div>
       </div>
 
       {/* List */}

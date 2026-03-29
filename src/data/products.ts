@@ -29,6 +29,10 @@ export const PRODUCTS: Product[] = [
     price: 50,
     currency: "CAD",
     categories: ["PO"],
+    images: [
+      "/images/products/POKZ_01-01.jpg",
+      "/images/products/POKZ_01-02.jpg",
+    ],
     etsyUrl: "https://www.etsy.com/ca/listing/4308877925/kmdt-pokz-01-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
     promotion: { label: "AFFORDABLE!", variant: "new" },
@@ -43,6 +47,11 @@ export const PRODUCTS: Product[] = [
     price: 65,
     currency: "CAD",
     categories: ["PO"],
+    images: [
+      "/images/products/POKZ_02-01.jpg",
+      "/images/products/POKZ_02-02.jpg",
+      "/images/products/POKZ_02-03.jpg",
+    ],
     etsyUrl: "https://www.etsy.com/ca/listing/1901389447/kmdt-pokz-02-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
     promotion: { label: "BEST SELLER", variant: "new" },
@@ -62,6 +71,22 @@ export const PRODUCTS: Product[] = [
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/1071324709/kmdt-og-op-1-stands",
     variationConfigId: "op1-stands",
+    inStock: true,
+  },
+  {
+    id: "pokz_shield",
+    slug: "pokz_shield",
+    sortOrder: 4,
+    name: "POKz_SHIELD",
+    shortDescription: "Snap-on shield that prevents accidental button presses and protects the screen from scratches and impact. Compatible with POKZ-01 and POKZ-02.",
+    price: 10,
+    currency: "CAD",
+    categories: ["PO"],
+    images: [
+      "/images/products/POKZ_Shield-01.jpg",
+    ],
+    etsyUrl: "https://www.etsy.com/ca/listing/899835391/kmdt-pokz-shield-2026-model",
+    variationConfigId: "POKz_SHIELD_Color",
     inStock: true,
   }
 ];

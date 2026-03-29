@@ -5,6 +5,7 @@ import { colorsStore } from "@/data/colorsStore.ts";
 import { useKustomizer } from "@/features/kustomizer/hooks/useKustomizer.ts";
 import { ButtonGrid } from "@/features/kustomizer/components/ButtonGrid.tsx";
 import type { ColorTemplate } from "@/types/index.ts";
+import { usePersistedState } from "./usePersistedState.ts";
 
 function exportTemplatesTs(templatesByModel: Record<string, ColorTemplate[]>): void {
   const modelBlocks = Object.entries(templatesByModel).map(([modelId, templates]) => {
@@ -155,7 +156,8 @@ function TemplateEditor({ modelId, initial, existingNames, onSave, onCancel }: T
 
 export function TemplatesAdmin() {
   const [selectedModelId, setSelectedModelId] = useState(CASE_MODELS[0].id);
-  const [templatesByModel, setTemplatesByModel] = useState<Record<string, ColorTemplate[]>>(
+  const [templatesByModel, setTemplatesByModel, { clearDraft, hasDraft }] = usePersistedState<Record<string, ColorTemplate[]>>(
+    "templates",
     () => Object.fromEntries(
       CASE_MODELS.map((m) => [m.id, [...(TEMPLATES[m.id] ?? [])]])
     )
@@ -216,6 +218,9 @@ export function TemplatesAdmin() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <p className="text-sm text-text-secondary">{templates.length} templates</p>
+          {hasDraft && (
+            <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded">Draft restored</span>
+          )}
           {CASE_MODELS.length > 1 && (
             <select
               value={selectedModelId}
@@ -229,13 +234,24 @@ export function TemplatesAdmin() {
             </select>
           )}
         </div>
-        <button
-          onClick={() => exportTemplatesTs(templatesByModel)}
-          className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
-                     hover:bg-accent-hover transition-colors cursor-pointer"
-        >
-          Export templates.ts ↓
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { exportTemplatesTs(templatesByModel); clearDraft(); }}
+            className="text-sm px-4 py-2 bg-accent text-surface font-medium rounded-lg
+                       hover:bg-accent-hover transition-colors cursor-pointer"
+          >
+            Export templates.ts ↓
+          </button>
+          {hasDraft && (
+            <button
+              onClick={() => { if (confirm("Discard draft and reload from source?")) { clearDraft(); location.reload(); } }}
+              className="text-xs px-3 py-2 bg-surface-elevated border border-border text-text-muted rounded-lg
+                         hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              Discard draft
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-surface-card border border-border rounded-xl overflow-hidden mb-4">
