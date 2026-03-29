@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { SITE } from "@/config/site.ts";
 
 function InstagramIcon() {
@@ -45,12 +44,6 @@ export function Footer() {
           >
             GitHub
           </a>
-          <Link
-            to="/admin"
-            className="hover:text-text-secondary transition-colors"
-          >
-            Admin
-          </Link>
         </div>
       </div>
     </footer>
