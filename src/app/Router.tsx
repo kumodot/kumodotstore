@@ -18,7 +18,7 @@ export function AppRouter() {
           />
           <Route path="kustomize/:modelId" element={<KustomizerPage />} />
           <Route path="configure/:configId" element={<VariationsPage />} />
-          <Route path="admin" element={<AdminPage />} />
+          <Route path="admin_k9x7m" element={<AdminPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
