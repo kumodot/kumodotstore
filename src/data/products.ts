@@ -17,7 +17,6 @@ export const PRODUCTS: Product[] = [
       "/images/products/POKZ_KOII-04.jpg",
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/4446276407/kmdt-pokz-koii-edition-2026-model",
-    promotion: { label: "POPULAR", variant: "popular" },
     inStock: true,
   },
   {
@@ -35,7 +34,6 @@ export const PRODUCTS: Product[] = [
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/4308877925/kmdt-pokz-01-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
-    promotion: { label: "AFFORDABLE!", variant: "new" },
     inStock: true,
   },
   {
@@ -54,7 +52,6 @@ export const PRODUCTS: Product[] = [
     ],
     etsyUrl: "https://www.etsy.com/ca/listing/1901389447/kmdt-pokz-02-2026-model-pocket-operator",
     kustomizerModelId: "pokz-02",
-    promotion: { label: "BEST SELLER", variant: "new" },
     inStock: true,
   },
   {
@@ -103,7 +100,7 @@ export const PRODUCTS: Product[] = [
       "/images/products/POKZ_KOII-04.jpg",
     ],
     kustomizerModelId: "pokz-02",
-    promotion: { label: "NEW", variant: "sale" },
-    inStock: true,
+    inStock: false,
+    soon: true,
   }
 ];

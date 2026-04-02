@@ -274,7 +274,7 @@ export function CartModal({ onClose }: CartModalProps) {
               price: i.product.price,
             })),
           };
-          fetch("https://script.google.com/macros/s/AKfycbwlnF_PHS1DUziarwkUyMzPkpjC0mvwj2rzYD0fmZPM4NEGvwEHPpCgYTHEMeVRAhcJ/exec", {
+          fetch("https://script.google.com/macros/s/AKfycbwbUQjeaYs8YpyLRpS4vqG4JD1g9wshOspzneff1rGrlLuxpxmSyZss2IXmTmrfcKlX/exec", {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },

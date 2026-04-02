@@ -2,7 +2,7 @@ import type { FilamentColor } from "@/types/index.ts";
 import type { Product } from "@/types/index.ts";
 import type { VariationConfig } from "@/types/index.ts";
 
-export function exportColorsTs(colors: FilamentColor[]): void {
+export async function exportColorsTs(colors: FilamentColor[]): Promise<void> {
   const lines = colors.map((c) => {
     const [r, g, b] = c.rgb;
     const avail = c.available ? "true" : "false";
@@ -22,7 +22,7 @@ export const COLORS_BY_ID: Record<string, FilamentColor> = Object.fromEntries(
   downloadFile("colors.ts", content);
 }
 
-export function exportProductsTs(products: Product[]): void {
+export async function exportProductsTs(products: Product[]): Promise<void> {
   const lines = products.map((p) => {
     const fields: string[] = [];
     fields.push(`    id: ${JSON.stringify(p.id)}`);
@@ -40,8 +40,13 @@ export function exportProductsTs(products: Product[]): void {
     if (p.etsyUrl) fields.push(`    etsyUrl: ${JSON.stringify(p.etsyUrl)}`);
     if (p.kustomizerModelId) fields.push(`    kustomizerModelId: ${JSON.stringify(p.kustomizerModelId)}`);
     if (p.variationConfigId) fields.push(`    variationConfigId: ${JSON.stringify(p.variationConfigId)}`);
-    if (p.promotion) fields.push(`    promotion: { label: ${JSON.stringify(p.promotion.label)}, variant: ${JSON.stringify(p.promotion.variant)} }`);
+    if (p.promotions?.length) {
+      const badges = p.promotions.map((b) => `      { label: ${JSON.stringify(b.label)}, variant: ${JSON.stringify(b.variant)} }`).join(",\n");
+      fields.push(`    promotions: [\n${badges},\n    ]`);
+    }
     fields.push(`    inStock: ${p.inStock}`);
+    if (p.listed === false) fields.push(`    listed: false`);
+    if (p.soon) fields.push(`    soon: true`);
     return `  {\n${fields.join(",\n")},\n  }`;
   });
 
@@ -54,7 +59,7 @@ ${lines.join(",\n")}
   downloadFile("products.ts", content);
 }
 
-export function exportVariationConfigsTs(configs: VariationConfig[]): void {
+export async function exportVariationConfigsTs(configs: VariationConfig[]): Promise<void> {
   const lines = configs.map((c) => {
     const groups = c.groups.map((g) => {
       const options = g.options.map((o) => {
@@ -84,12 +89,24 @@ export const VARIATION_CONFIGS_BY_ID: Record<string, VariationConfig> = Object.f
   downloadFile("variationConfigs.ts", content);
 }
 
-function downloadFile(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+async function downloadFile(filename: string, content: string): Promise<void> {
+  try {
+    const handle = await (window as unknown as { showSaveFilePicker: (o: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker({
+      suggestedName: filename,
+      types: [{ description: "TypeScript file", accept: { "text/plain": [".ts"] } }],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    // fallback to download link
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 }

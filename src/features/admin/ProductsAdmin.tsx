@@ -7,7 +7,15 @@ import { exportProductsTs } from "./exportUtils.ts";
 import { usePersistedState, readDraft } from "./usePersistedState.ts";
 import type { VariationConfig } from "@/types/index.ts";
 
-const PROMOTION_VARIANTS = ["new", "sale", "popular", "limited"] as const;
+const PROMOTION_VARIANTS: { variant: string; color: string; dot: string }[] = [
+  { variant: "new",     color: "bg-green-500 text-white",         dot: "bg-green-500" },
+  { variant: "sale",    color: "bg-red-500 text-white",           dot: "bg-red-500" },
+  { variant: "popular", color: "bg-accent text-[#0f0f0f]",        dot: "bg-yellow-400" },
+  { variant: "limited", color: "bg-amber-500 text-[#0f0f0f]",     dot: "bg-amber-500" },
+  { variant: "soon",    color: "bg-purple-500 text-white",         dot: "bg-purple-500" },
+  { variant: "blue",    color: "bg-blue-500 text-white",           dot: "bg-blue-500" },
+  { variant: "pink",    color: "bg-pink-500 text-white",           dot: "bg-pink-500" },
+];
 
 const EMPTY_PRODUCT: Omit<Product, "id" | "slug"> = {
   sortOrder: 99,
@@ -134,11 +142,10 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
   const [variationConfigId, setVariationConfigId] = useState(
     initial?.variationConfigId ?? (liveConfigs[0]?.id ?? "")
   );
-  const [hasPromo, setHasPromo] = useState(!!initial?.promotion);
-  const [promoLabel, setPromoLabel] = useState(initial?.promotion?.label ?? "NEW");
-  const [promoVariant, setPromoVariant] = useState<typeof PROMOTION_VARIANTS[number]>(
-    initial?.promotion?.variant ?? "new"
-  );
+  const initialBadges = initial?.promotions ?? (initial?.promotion ? [initial.promotion] : []);
+  const [badges, setBadges] = useState<{ label: string; variant: string }[]>(initialBadges);
+  const [listed, setListed] = useState(initial?.listed !== false);
+  const [soon, setSoon] = useState(initial?.soon === true);
   const [error, setError] = useState("");
 
   const set = (key: keyof Product, value: unknown) =>
@@ -153,11 +160,11 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
 
     const categories = categoriesInput.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
     const images = imagesInput.split("\n").map((s) => s.trim()).filter(Boolean);
-    const promotion = hasPromo ? { label: promoLabel, variant: promoVariant } : undefined;
+    const promotions = badges.length > 0 ? badges : undefined;
     const kustomizerModelId = hasKustomizer ? kustomizerModel : undefined;
     const variationConfigIdValue = hasVariationConfig ? variationConfigId : undefined;
 
-    onSave({ ...form, id, slug: id, categories, images, promotion, kustomizerModelId, variationConfigId: variationConfigIdValue });
+    onSave({ ...form, id, slug: id, categories, images, promotions, promotion: undefined, kustomizerModelId, variationConfigId: variationConfigIdValue, listed, soon: soon || undefined });
   };
 
   const inputCls = "w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none";
@@ -273,61 +280,102 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
             )
           )}
         </div>
-        <div>
-          <label className="block text-xs text-text-secondary mb-1">Stock</label>
-          <button
-            onClick={() => set("inStock", !form.inStock)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
-              form.inStock ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-            }`}
-          >
-            {form.inStock ? "In Stock" : "Out of Stock"}
-          </button>
+        <div className="flex gap-3">
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Stock</label>
+            <button
+              onClick={() => set("inStock", !form.inStock)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                form.inStock ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              }`}
+            >
+              {form.inStock ? "In Stock" : "Out of Stock"}
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Visibility</label>
+            <button
+              onClick={() => setListed((v) => !v)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                listed ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-surface-elevated text-text-muted hover:bg-surface-hover"
+              }`}
+            >
+              {listed ? "Listed" : "Unlisted"}
+            </button>
+          </div>
+          <div>
+            <label className="block text-xs text-text-secondary mb-1">Coming Soon</label>
+            <button
+              onClick={() => {
+                const newSoon = !soon;
+                setSoon(newSoon);
+                if (newSoon) set("inStock", false);
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
+                soon ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" : "bg-surface-elevated text-text-muted hover:bg-surface-hover"
+              }`}
+            >
+              {soon ? "Soon ON" : "Soon OFF"}
+            </button>
+          </div>
         </div>
         <div className="sm:col-span-2">
           <label className="block text-xs text-text-secondary mb-1">
-            Images (one path per line)
+            Images / Videos (one URL or path per line)
           </label>
           <textarea
             value={imagesInput}
             onChange={(e) => setImagesInput(e.target.value)}
             rows={3}
-            placeholder={"/images/products/pokz-koii-01.jpg\n/images/products/pokz-koii-02.jpg"}
+            placeholder={"/images/products/pokz-koii-01.jpg\nhttps://pub-xxx.r2.dev/demo.mp4"}
             className={`${inputCls} resize-none font-mono text-xs`}
           />
         </div>
         <div className="sm:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <label className="text-xs text-text-secondary">Promotion badge</label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs text-text-secondary">Promotion Badges</label>
             <button
-              onClick={() => setHasPromo((v) => !v)}
-              className={`text-xs px-2 py-0.5 rounded cursor-pointer transition-colors ${
-                hasPromo ? "bg-accent/20 text-accent" : "bg-surface-elevated text-text-muted"
-              }`}
+              onClick={() => setBadges((b) => [...b, { label: "NEW", variant: "new" }])}
+              className="text-xs px-2 py-0.5 rounded cursor-pointer bg-surface-elevated text-text-muted hover:bg-surface-hover transition-colors"
             >
-              {hasPromo ? "On" : "Off"}
+              + Add badge
             </button>
           </div>
-          {hasPromo && (
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={promoLabel}
-                onChange={(e) => setPromoLabel(e.target.value)}
-                placeholder="NEW 2026"
-                className={`${inputCls} w-36`}
-              />
-              <select
-                value={promoVariant}
-                onChange={(e) => setPromoVariant(e.target.value as typeof PROMOTION_VARIANTS[number])}
-                className={`${inputCls} w-36`}
-              >
-                {PROMOTION_VARIANTS.map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="space-y-2">
+            {badges.map((badge, i) => (
+              <div key={i} className="flex gap-2 items-center flex-wrap">
+                <input
+                  type="text"
+                  value={badge.label}
+                  onChange={(e) => setBadges((b) => b.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                  placeholder="POPULAR"
+                  className={`${inputCls} w-36`}
+                />
+                {/* color preview dot */}
+                <span
+                  className={`w-4 h-4 rounded-full shrink-0 ${PROMOTION_VARIANTS.find((v) => v.variant === badge.variant)?.dot ?? "bg-surface-elevated"}`}
+                />
+                {/* color palette */}
+                <div className="flex gap-1.5 items-center">
+                  {PROMOTION_VARIANTS.map((pv) => (
+                    <button
+                      key={pv.variant}
+                      title={pv.variant}
+                      onClick={() => setBadges((b) => b.map((x, j) => j === i ? { ...x, variant: pv.variant } : x))}
+                      className={`w-5 h-5 rounded-full cursor-pointer transition-transform hover:scale-110 ${pv.dot} ${badge.variant === pv.variant ? "ring-2 ring-offset-1 ring-offset-surface-card ring-white scale-110" : ""}`}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => setBadges((b) => b.filter((_, j) => j !== i))}
+                  className="text-xs text-red-400 hover:text-red-300 cursor-pointer px-2"
+                >✕</button>
+              </div>
+            ))}
+            {badges.length === 0 && (
+              <p className="text-xs text-text-muted italic">No badges — click + Add badge to add one.</p>
+            )}
+          </div>
         </div>
       </div>
 
