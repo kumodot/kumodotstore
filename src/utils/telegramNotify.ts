@@ -1,7 +1,7 @@
 import { TELEGRAM } from "@/config/site.ts";
 import type { CartItem } from "@/data/cartStore.ts";
 
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbys5X-fFOjQyICPc1kONmMDHOKtQYo5o4bbCwSzTzohNgpOEF5u0IhHZB1fCVZ_jetR/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwlnF_PHS1DUziarwkUyMzPkpjC0mvwj2rzYD0fmZPM4NEGvwEHPpCgYTHEMeVRAhcJ/exec";
 
 // ChitChats Advanced CSV column order (matches their official template exactly)
 const CHITCHATS_HEADERS = [
