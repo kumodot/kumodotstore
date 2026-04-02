@@ -1,26 +1,7 @@
 import { TELEGRAM } from "@/config/site.ts";
 import type { CartItem } from "@/data/cartStore.ts";
-import { ISO_COUNTRY_NAMES } from "@/data/shipping.ts";
-import { buildOrderSlipHtml } from "@/utils/orderSlip.ts";
 
-async function sendMessage(text: string): Promise<void> {
-  await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM.chatId, text, parse_mode: "Markdown" }),
-  });
-}
-
-async function sendDocument(filename: string, content: string, mimeType: string, caption?: string): Promise<void> {
-  const form = new FormData();
-  form.append("chat_id", TELEGRAM.chatId);
-  form.append("document", new Blob([content], { type: mimeType }), filename);
-  if (caption) form.append("caption", caption);
-  await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendDocument`, {
-    method: "POST",
-    body: form,
-  });
-}
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxhsJ06oFvxy0xtqKgPjm38YTpt1l_je09LVT3M6-ZJMAP_eYvcwExLpD-oLZ22wE-z/exec";
 
 // ChitChats Advanced CSV column order (matches their official template exactly)
 const CHITCHATS_HEADERS = [
@@ -58,8 +39,6 @@ export function buildChitChatsCsv(params: {
     recipientName = "", email = "", address1 = "", city = "",
     provinceCode = "", postalCode = "" } = params;
 
-  // First item row includes recipient info + package info
-  // Subsequent item rows for same order leave recipient fields blank (ChitChats groups by order_id)
   const rows = items.map((item, idx) => {
     const isFirst = idx === 0;
     const desc = item.kustomizerCode
@@ -122,6 +101,7 @@ function csvFilename(recipientName: string | undefined, countryCode: string): st
   return `ORDER_${dateStr}_${firstName}_${countryCode}.csv`;
 }
 
+// Pre-checkout notification — sent via backend to keep bot token server-side
 export async function notifyShippingTelegram({
   items,
   total,
@@ -139,124 +119,24 @@ export async function notifyShippingTelegram({
   recipientName?: string;
   email?: string;
 }): Promise<void> {
-  const date = new Date().toLocaleString("en-CA", {
-    timeZone: "America/Toronto",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
-
-  const itemLines = items.map((item) => {
-    const qty = item.quantity > 1 ? ` ×${item.quantity}` : "";
-    return `• ${item.product.name}${qty}`;
-  }).join("\n");
-
-  const countryName = ISO_COUNTRY_NAMES[countryCode] ?? countryCode;
-  const shippingLine = shipping > 0 ? `CA$${shipping.toFixed(2)}` : "Free";
-
-  const text = [
-    `👀 *Checkout Started*`,
-    `📅 ${date}`,
-    ``,
-    recipientName ? `👤 ${recipientName}` : null,
-    email ? `✉️ ${email}` : null,
-    phone ? `📞 ${phone}` : null,
-    ``,
-    `📦 *Items:*`,
-    itemLines,
-    ``,
-    `🌍 Ship to: ${countryName} (${countryCode})`,
-    ``,
-    `💰 Subtotal: CA$${total.toFixed(2)}`,
-    `📮 Shipping: ${shippingLine}`,
-    `💵 *Est. Total: CA$${(total + shipping).toFixed(2)}*`,
-    ``,
-    `_Waiting for payment confirmation…_`,
-  ].filter((l) => l !== null).join("\n");
-
-  await sendMessage(text);
-}
-
-export async function notifyOrderTelegram({
-  orderId,
-  items,
-  total,
-  shipping,
-  countryCode,
-  phone,
-  recipientName,
-  email,
-  address1,
-  city,
-  provinceCode,
-  postalCode,
-}: {
-  orderId: string;
-  items: CartItem[];
-  total: number;
-  shipping: number;
-  countryCode: string;
-  phone: string;
-  recipientName?: string;
-  email?: string;
-  address1?: string;
-  city?: string;
-  provinceCode?: string;
-  postalCode?: string;
-}): Promise<void> {
-  const date = new Date().toLocaleString("en-CA", {
-    timeZone: "America/Toronto",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
-
-  const itemLines = items.map((item) => {
-    const qty = item.quantity > 1 ? ` ×${item.quantity}` : "";
-    const code = item.kustomizerCode ? `\n    Code: \`${item.kustomizerCode}\`` : "";
-    return `• ${item.product.name}${qty} — CA$${(item.product.price * item.quantity).toFixed(2)}${code}`;
-  }).join("\n");
-
-  const countryName = ISO_COUNTRY_NAMES[countryCode] ?? countryCode;
-  const shippingLine = shipping > 0 ? `CA$${shipping.toFixed(2)}` : "Free";
-
-  const text = [
-    `✅ *Order Confirmed — ${orderId}*`,
-    `📅 ${date}`,
-    ``,
-    `📦 *Items:*`,
-    itemLines,
-    ``,
-    `🌍 Ship to: ${countryName} (${countryCode})`,
-    phone ? `📞 ${phone}` : null,
-    email ? `✉️ ${email}` : null,
-    ``,
-    `💰 Subtotal: CA$${total.toFixed(2)}`,
-    `📮 Shipping: ${shippingLine}`,
-    `💵 *Total: CA$${(total + shipping).toFixed(2)}*`,
-  ].filter((l) => l !== null).join("\n");
-
-  // Send text notification
-  await sendMessage(text);
-
-  // Send ChitChats CSV
-  const csv = buildChitChatsCsv({ orderId, items, countryCode, phone, recipientName, email, address1, city, provinceCode, postalCode });
-  const csvName = csvFilename(recipientName, countryCode);
-  await sendDocument(csvName, csv, "text/csv", `📋 ChitChats CSV — ${orderId}`);
-
-  // Send order slip as HTML (open in browser → Print → Save as PDF)
-  const slipHtml = buildOrderSlipHtml({
-    orderId,
-    orderDate: new Date().toLocaleDateString("en-CA", {
-      timeZone: "America/Toronto", day: "numeric", month: "short", year: "numeric",
+  fetch(BACKEND_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      secret: import.meta.env.VITE_BACKEND_SECRET,
+      action: "shipping_started",
+      items: items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+      total,
+      shipping,
+      countryCode,
+      phone,
+      recipientName,
+      email,
     }),
-    items, total, shipping, countryCode, phone, recipientName,
-    address1, city, provinceCode, postalCode,
-    paymentMethod: "PayPal",
-  });
-  const slipName = csvName.replace(".csv", ".html");
-  await sendDocument(slipName, slipHtml, "text/html", `🧾 Order Slip — ${orderId}`);
+  }).catch(() => {});
 }
 
-// Download a fake ChitChats CSV for testing the import
 export function downloadTestCsv(): void {
   const csv = buildChitChatsCsv({
     orderId: "TEST-001",
@@ -292,9 +172,15 @@ export function downloadTestCsv(): void {
   URL.revokeObjectURL(url);
 }
 
-// Send a test notification to verify the bot is working
+// Admin-only: sends test message directly (local use only, bot token visible in bundle)
 export async function sendTelegramTest(): Promise<void> {
-  await sendMessage(
-    `✅ *Telegram connected!*\n\nKumodot Store bot is working correctly.\n_${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })}_`
-  );
+  await fetch(`https://api.telegram.org/bot${TELEGRAM.botToken}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: TELEGRAM.chatId,
+      text: `✅ *Telegram connected!*\n\nKumodot Store bot is working correctly.\n_${new Date().toLocaleString("en-CA", { timeZone: "America/Toronto" })}_`,
+      parse_mode: "Markdown",
+    }),
+  });
 }

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Navbar } from "@/components/layout/Navbar.tsx";
 import { Footer } from "@/components/layout/Footer.tsx";
+import { PrivacyBanner } from "@/components/layout/PrivacyBanner.tsx";
 
 export function Layout() {
   return (
@@ -10,6 +11,7 @@ export function Layout() {
         <Outlet />
       </main>
       <Footer />
+      <PrivacyBanner />
     </div>
   );
 }

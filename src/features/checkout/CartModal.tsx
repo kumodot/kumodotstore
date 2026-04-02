@@ -9,6 +9,25 @@ import { printOrderSlip } from "@/utils/orderSlip.ts";
 
 const CHECKOUT_COUNTRIES_GROUPED = getCheckoutCountriesGrouped();
 
+const SHIPPING_STORAGE_KEY = "kumodot_shipping_v1";
+
+function loadSavedShipping() {
+  try {
+    const raw = localStorage.getItem(SHIPPING_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveShipping(data: {
+  recipientName: string; email: string; address1: string;
+  city: string; provinceCode: string; postalCode: string;
+  phone: string; countryCode: string;
+}) {
+  localStorage.setItem(SHIPPING_STORAGE_KEY, JSON.stringify(data));
+}
+
 function CountryOption({ c, selected, onSelect, variant }: {
   c: CheckoutCountry;
   selected: boolean;
@@ -144,14 +163,15 @@ function customizeLink(
 export function CartModal({ onClose }: CartModalProps) {
   const { items, total } = useCart();
   const [step, setStep] = useState<Step>("cart");
-  const [countryCode, setCountryCode] = useState("CA");
-  const [recipientName, setRecipientName] = useState("");
-  const [email, setEmail] = useState("");
-  const [address1, setAddress1] = useState("");
-  const [city, setCity] = useState("");
-  const [provinceCode, setProvinceCode] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [phone, setPhone] = useState("");
+  const saved = loadSavedShipping();
+  const [countryCode, setCountryCode] = useState(saved?.countryCode ?? "CA");
+  const [recipientName, setRecipientName] = useState(saved?.recipientName ?? "");
+  const [email, setEmail] = useState(saved?.email ?? "");
+  const [address1, setAddress1] = useState(saved?.address1 ?? "");
+  const [city, setCity] = useState(saved?.city ?? "");
+  const [provinceCode, setProvinceCode] = useState(saved?.provinceCode ?? "");
+  const [postalCode, setPostalCode] = useState(saved?.postalCode ?? "");
+  const [phone, setPhone] = useState(saved?.phone ?? "");
   const [isGift, setIsGift] = useState(false);
   const [giftMessage, setGiftMessage] = useState("");
   const paypalRendered = useRef(false);
@@ -260,6 +280,7 @@ export function CartModal({ onClose }: CartModalProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(backendPayload),
           }).catch(() => {});
+          saveShipping({ recipientName, email, address1, city, provinceCode, postalCode, phone, countryCode });
           cartStore.clear();
           onClose();
           printOrderSlip(slipParams);
