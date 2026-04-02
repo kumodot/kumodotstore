@@ -88,5 +88,22 @@ export const PRODUCTS: Product[] = [
     etsyUrl: "https://www.etsy.com/ca/listing/899835391/kmdt-pokz-shield-2026-model",
     variationConfigId: "POKz_SHIELD_Color",
     inStock: true,
+  },
+  {
+    id: "pokz_cyber",
+    slug: "pokz_cyber",
+    sortOrder: 7,
+    name: "POKZ_CYBER",
+    shortDescription: "Cyber Edition(Theme and materials)  of the POKZ",
+    price: 60,
+    currency: "CAD",
+    categories: ["PO"],
+    images: [
+      "https://pub-0e445c4fb3434b6689a308b9f61d4096.r2.dev/PcnoPc165.mp4",
+      "/images/products/POKZ_KOII-04.jpg",
+    ],
+    kustomizerModelId: "pokz-02",
+    promotion: { label: "NEW", variant: "sale" },
+    inStock: true,
   }
 ];

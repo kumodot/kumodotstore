@@ -1,5 +1,9 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
+
+function isVideo(src: string) {
+  return src.toLowerCase().endsWith(".mp4") || src.toLowerCase().endsWith(".webm");
+}
 
 interface LightboxProps {
   images: string[];
@@ -8,10 +12,30 @@ interface LightboxProps {
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
+  muted?: boolean;
+  onToggleMute?: () => void;
 }
 
-export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: LightboxProps) {
+export function Lightbox({ images, current, alt, onClose, onPrev, onNext, muted = true, onToggleMute }: LightboxProps) {
   const total = images.length;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Play current video, pause+mute all others when navigating
+  useEffect(() => {
+    const videos = containerRef.current?.querySelectorAll<HTMLVideoElement>("video") ?? [];
+    videos.forEach((v, i) => {
+      if (i === current) {
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+        v.muted = true;
+      }
+    });
+    // If navigated away from a video, sync mute state back to parent
+    if (!isVideo(images[current]) && onToggleMute && !muted) {
+      onToggleMute();
+    }
+  }, [current]);
 
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") onClose();
@@ -51,18 +75,46 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
           </svg>
         </button>
 
-        {/* Image area */}
-        <div className="relative aspect-square bg-surface-elevated overflow-hidden">
+        {/* Image/Video area */}
+        <div ref={containerRef} className="relative aspect-square bg-surface-elevated overflow-hidden">
           {images.map((src, i) => (
-            <img
-              key={src}
-              src={src}
-              alt={`${alt} ${i + 1}`}
-              className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
-              style={{ opacity: i === current ? 1 : 0 }}
-              draggable={false}
-            />
+            isVideo(src) ? (
+              <video
+                key={src}
+                src={src}
+                autoPlay
+                muted={muted}
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
+                style={{ opacity: i === current ? 1 : 0 }}
+              />
+            ) : (
+              <img
+                key={src}
+                src={src}
+                alt={`${alt} ${i + 1}`}
+                className="absolute inset-0 w-full h-full object-contain transition-opacity duration-300"
+                style={{ opacity: i === current ? 1 : 0 }}
+                draggable={false}
+              />
+            )
           ))}
+
+          {/* Mute button — only when current is video */}
+          {isVideo(images[current]) && onToggleMute && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+              className="absolute bottom-3 right-3 z-20 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+              aria-label={muted ? "Unmute" : "Mute"}
+            >
+              <img
+                src={muted ? "/images/mute.svg" : "/images/unmute.svg"}
+                alt={muted ? "Muted" : "Unmuted"}
+                className="w-6 h-6"
+              />
+            </button>
+          )}
 
           {total > 1 && (
             <button
@@ -93,7 +145,7 @@ export function Lightbox({ images, current, alt, onClose, onPrev, onNext }: Ligh
           )}
         </div>
 
-        {/* Dots — below image, outside overflow */}
+        {/* Dots */}
         {total > 1 && (
           <div className="flex items-center justify-center gap-2 py-3 bg-surface-card">
             {images.map((_, i) => (

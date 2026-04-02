@@ -55,7 +55,16 @@ export function AdminPage() {
               Local admin — changes stay in your browser. Export to update source files.
             </p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+            <a
+              href="http://localhost:5173"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
+                         text-text-secondary hover:bg-surface-hover transition-colors cursor-pointer"
+            >
+              🌐 Preview Store
+            </a>
             <button
               onClick={() => printTestOrderSlip(false)}
               className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
