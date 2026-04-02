@@ -34,6 +34,7 @@ jobs:
           VITE_TELEGRAM_BOT_TOKEN: ${{ secrets.VITE_TELEGRAM_BOT_TOKEN }}
           VITE_TELEGRAM_CHAT_ID: ${{ secrets.VITE_TELEGRAM_CHAT_ID }}
           VITE_BACKEND_SECRET: ${{ secrets.VITE_BACKEND_SECRET }}
+          VITE_PAYPAL_CLIENT_ID: ${{ secrets.VITE_PAYPAL_CLIENT_ID }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
