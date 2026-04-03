@@ -124,6 +124,7 @@ export const PRODUCTS: Product[] = [
       { label: "SOON", variant: "sale" },
     ],
     inStock: false,
+    listed: false,
     soon: true,
   }
 ];
