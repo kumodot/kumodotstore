@@ -33,6 +33,7 @@ const EMPTY_PRODUCT: Omit<Product, "id" | "slug"> = {
 function ProductRow({
   product,
   onEdit,
+  onDuplicate,
   onRemove,
   onMoveUp,
   onMoveDown,
@@ -41,6 +42,7 @@ function ProductRow({
 }: {
   product: Product;
   onEdit: (p: Product) => void;
+  onDuplicate: (p: Product) => void;
   onRemove: (id: string) => void;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
@@ -88,9 +90,13 @@ function ProductRow({
         )}
       </td>
       <td className="py-3 px-3">
-        <span className={`text-xs px-2 py-0.5 rounded font-medium ${product.inStock ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
-          {product.inStock ? "In Stock" : "Out of Stock"}
-        </span>
+        {product.soon ? (
+          <span className="text-xs px-2 py-0.5 rounded font-medium bg-purple-500/20 text-purple-400">Soon</span>
+        ) : (
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${product.inStock ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+            {product.inStock ? "In Stock" : "Out of Stock"}
+          </span>
+        )}
       </td>
       <td className="py-3 px-3">
         <div className="flex gap-2">
@@ -100,6 +106,14 @@ function ProductRow({
                        text-text-secondary rounded hover:bg-surface-hover transition-colors cursor-pointer"
           >
             Edit
+          </button>
+          <button
+            onClick={() => onDuplicate(product)}
+            title="Duplicate product"
+            className="text-xs px-2 py-1 bg-surface-elevated border border-border
+                       text-text-muted rounded hover:bg-surface-hover transition-colors cursor-pointer"
+          >
+            ⧉
           </button>
           <button
             onClick={() => {
@@ -120,10 +134,11 @@ interface ProductFormProps {
   onSave: (p: Product) => void;
   onCancel: () => void;
   existingIds: string[];
+  allowEditId?: boolean;
 }
 
-function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProps) {
-  const isNew = !initial;
+function ProductForm({ initial, onSave, onCancel, existingIds, allowEditId }: ProductFormProps) {
+  const isNew = !initial || allowEditId;
   const liveConfigs = readDraft<VariationConfig[]>("configurators", VARIATION_CONFIGS);
   const [form, setForm] = useState<Product>(
     initial ?? { id: "", slug: "", ...EMPTY_PRODUCT }
@@ -284,9 +299,14 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
           <div>
             <label className="block text-xs text-text-secondary mb-1">Stock</label>
             <button
-              onClick={() => set("inStock", !form.inStock)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
-                form.inStock ? "bg-green-500/20 text-green-400 hover:bg-green-500/30" : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+              onClick={() => { if (!soon) set("inStock", !form.inStock); }}
+              disabled={soon}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                soon
+                  ? "bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed"
+                  : form.inStock
+                    ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 cursor-pointer"
+                    : "bg-red-500/20 text-red-400 hover:bg-red-500/30 cursor-pointer"
               }`}
             >
               {form.inStock ? "In Stock" : "Out of Stock"}
@@ -310,6 +330,7 @@ function ProductForm({ initial, onSave, onCancel, existingIds }: ProductFormProp
                 const newSoon = !soon;
                 setSoon(newSoon);
                 if (newSoon) set("inStock", false);
+                else set("inStock", true);
               }}
               className={`px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
                 soon ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" : "bg-surface-elevated text-text-muted hover:bg-surface-hover"
@@ -403,6 +424,7 @@ export function ProductsAdmin() {
     () => [...PRODUCTS].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99))
   );
   const [editing, setEditing] = useState<Product | null>(null);
+  const [duplicating, setDuplicating] = useState<Product | null>(null);
   const [adding, setAdding] = useState(false);
 
   const handleSave = (updated: Product) => {
@@ -412,9 +434,21 @@ export function ProductsAdmin() {
     setEditing(null);
   };
 
+  const handleSaveDuplicate = (updated: Product) => {
+    setProducts((prev) => prev.filter((p) => p.id !== duplicating!.id).concat(updated));
+    setDuplicating(null);
+  };
+
   const handleAdd = (newProduct: Product) => {
     setProducts((prev) => [...prev, newProduct]);
     setAdding(false);
+  };
+
+  const handleDuplicate = (product: Product) => {
+    const newId = product.id + "-copy";
+    const copy: Product = { ...product, id: newId, slug: newId, name: product.name + " (copy)", sortOrder: (product.sortOrder ?? 99) + 1 };
+    setProducts((prev) => [...prev, copy]);
+    setDuplicating(copy);
   };
 
   const handleRemove = (id: string) => {
@@ -493,7 +527,19 @@ export function ProductsAdmin() {
           </thead>
           <tbody>
             {products.map((product, idx) => (
-              editing?.id === product.id ? (
+              duplicating?.id === product.id ? (
+                <tr key={product.id}>
+                  <td colSpan={7} className="p-3">
+                    <ProductForm
+                      initial={duplicating}
+                      onSave={handleSaveDuplicate}
+                      onCancel={() => { setProducts((prev) => prev.filter((p) => p.id !== duplicating.id)); setDuplicating(null); }}
+                      existingIds={existingIds}
+                      allowEditId
+                    />
+                  </td>
+                </tr>
+              ) : editing?.id === product.id ? (
                 <tr key={product.id}>
                   <td colSpan={7} className="p-3">
                     <ProductForm
@@ -509,6 +555,7 @@ export function ProductsAdmin() {
                   key={product.id}
                   product={product}
                   onEdit={setEditing}
+                  onDuplicate={handleDuplicate}
                   onRemove={handleRemove}
                   onMoveUp={handleMoveUp}
                   onMoveDown={handleMoveDown}

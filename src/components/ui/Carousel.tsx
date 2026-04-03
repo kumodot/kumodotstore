@@ -85,9 +85,10 @@ export function Carousel({ images, alt, autoPlayMs = 3000 }: CarouselProps) {
 
   useEffect(() => {
     if (total <= 1 || isHovered || lightboxOpen) return;
-    const id = setInterval(next, autoPlayMs);
-    return () => clearInterval(id);
-  }, [total, isHovered, lightboxOpen, next, autoPlayMs]);
+    const delay = isVideo(images[current]) ? 5000 : autoPlayMs;
+    const id = setTimeout(next, delay);
+    return () => clearTimeout(id);
+  }, [total, isHovered, lightboxOpen, next, autoPlayMs, current, images]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
