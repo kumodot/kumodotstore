@@ -100,6 +100,28 @@ export const PRODUCTS: Product[] = [
       "/images/products/POKZ_KOII-04.jpg",
     ],
     kustomizerModelId: "pokz-02",
+    promotions: [
+      { label: "NEW", variant: "new" },
+    ],
+    inStock: false,
+  },
+  {
+    id: "pokz_cyber_evo",
+    slug: "pokz_cyber_evo",
+    sortOrder: 8,
+    name: "POKZ_CYBER EVO Edition",
+    shortDescription: "EVANGELLION EDITION ",
+    price: 80,
+    currency: "CAD",
+    categories: ["PO"],
+    images: [
+      "https://pub-0e445c4fb3434b6689a308b9f61d4096.r2.dev/PcnoPc165.mp4",
+      "/images/products/POKZ_KOII-04.jpg",
+    ],
+    kustomizerModelId: "pokz-02",
+    promotions: [
+      { label: "SOON", variant: "sale" },
+    ],
     inStock: false,
     soon: true,
   }
