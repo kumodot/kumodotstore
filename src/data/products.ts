@@ -104,6 +104,7 @@ export const PRODUCTS: Product[] = [
       { label: "NEW", variant: "new" },
     ],
     inStock: false,
+    listed: false,
   },
   {
     id: "pokz_cyber_evo",
@@ -123,6 +124,7 @@ export const PRODUCTS: Product[] = [
       { label: "SOON", variant: "sale" },
     ],
     inStock: false,
+    listed: false,
     soon: true,
   }
 ];
