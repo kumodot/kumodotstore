@@ -7,7 +7,7 @@ import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
 import { cartStore } from "@/data/cartStore.ts";
 import type { Product, ProductPromotion } from "@/types/index.ts";
 
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwbUQjeaYs8YpyLRpS4vqG4JD1g9wshOspzneff1rGrlLuxpxmSyZss2IXmTmrfcKlX/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec";
 
 const PROMO_COLORS: Record<string, string> = {
   new:     "bg-green-500 text-white",
