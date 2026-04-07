@@ -16,6 +16,7 @@ _backup
 _backend
 .claude
 admin-local.bat
+push-products.bat
 
 # Editor directories and files
 .vscode/*

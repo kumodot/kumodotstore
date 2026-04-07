@@ -98,6 +98,12 @@ function ProductRow({
           </span>
         )}
       </td>
+      <td className="py-3 px-3 text-center">
+        {product.listed === false
+          ? <span className="text-xs px-2 py-0.5 rounded font-medium bg-surface-elevated text-text-muted">Unlisted</span>
+          : <span className="text-xs text-green-400">✓</span>
+        }
+      </td>
       <td className="py-3 px-3">
         <div className="flex gap-2">
           <button
@@ -522,6 +528,7 @@ export function ProductsAdmin() {
               <th className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider py-3 px-3">Categories</th>
               <th className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider py-3 px-3">Media</th>
               <th className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider py-3 px-3">Stock</th>
+              <th className="text-center text-xs font-semibold text-text-muted uppercase tracking-wider py-3 px-3">Listed</th>
               <th className="text-left text-xs font-semibold text-text-muted uppercase tracking-wider py-3 px-3">Actions</th>
             </tr>
           </thead>
@@ -529,7 +536,7 @@ export function ProductsAdmin() {
             {products.map((product, idx) => (
               duplicating?.id === product.id ? (
                 <tr key={product.id}>
-                  <td colSpan={7} className="p-3">
+                  <td colSpan={8} className="p-3">
                     <ProductForm
                       initial={duplicating}
                       onSave={handleSaveDuplicate}
@@ -541,7 +548,7 @@ export function ProductsAdmin() {
                 </tr>
               ) : editing?.id === product.id ? (
                 <tr key={product.id}>
-                  <td colSpan={7} className="p-3">
+                  <td colSpan={8} className="p-3">
                     <ProductForm
                       initial={editing}
                       onSave={handleSave}

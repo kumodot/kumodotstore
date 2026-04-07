@@ -6,25 +6,7 @@ import { useKustomizer } from "@/features/kustomizer/hooks/useKustomizer.ts";
 import { ButtonGrid } from "@/features/kustomizer/components/ButtonGrid.tsx";
 import type { ColorTemplate } from "@/types/index.ts";
 import { usePersistedState } from "./usePersistedState.ts";
-
-function exportTemplatesTs(templatesByModel: Record<string, ColorTemplate[]>): void {
-  const modelBlocks = Object.entries(templatesByModel).map(([modelId, templates]) => {
-    const lines = templates.map(
-      (t) => `    { name: ${JSON.stringify(t.name)}, code: ${JSON.stringify(t.code)} },`
-    );
-    return `  ${JSON.stringify(modelId)}: [\n${lines.join("\n")}\n  ]`;
-  });
-
-  const content = `import type { ColorTemplate } from "@/types/index.ts";\n\nexport const TEMPLATES: Record<string, ColorTemplate[]> = {\n${modelBlocks.join(",\n")},\n};\n`;
-
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "templates.ts";
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import { exportTemplatesTs } from "./exportUtils.ts";
 
 interface TemplateEditorProps {
   modelId: string;

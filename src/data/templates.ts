@@ -13,5 +13,6 @@ export const TEMPLATES: Record<string, ColorTemplate[]> = {
     { name: "FADE", code: "BK_DG_LG_WH/BK_DG_LG_WH/BK_DG_LG_WH/BK_DG_LG_WH" },
     { name: "MERICA", code: "BL_BL_WH_WH/BL_BL_RD_RD/WH_WH_WH_WH/RD_RD_RD_RD" },
     { name: "PokeBall", code: "RD_RD_RD_RD/RD_BK_BK_RD/WH_BK_BK_WH/WH_WH_WH_WH" },
+    { name: "SunRise", code: "BL_BL_BL_BL/OR_OR_OR_OR/YE_YE_YE_YE/WH_WH_WH_WH" },
   ],
 };
