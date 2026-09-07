@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { SITE } from "@/config/site.ts";
+import { STORE_MODE } from "@/data/storeMode.ts";
 import { useCart } from "@/features/checkout/useCart.ts";
 import { CartModal } from "@/features/checkout/CartModal.tsx";
 
@@ -14,7 +15,7 @@ export function Navbar() {
   // Open cart automatically when navigated to /?openCart=1
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get("openCart") === "1") {
+    if (STORE_MODE.cartEnabled && params.get("openCart") === "1") {
       setCartOpen(true);
       navigate("/", { replace: true });
     }
@@ -59,6 +60,7 @@ export function Navbar() {
             </a>
 
             {/* Cart button */}
+            {STORE_MODE.cartEnabled && (
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex items-center gap-1.5 p-2 text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
@@ -83,10 +85,12 @@ export function Navbar() {
                 </span>
               )}
             </button>
+            )}
           </div>
 
           {/* Mobile right side */}
           <div className="flex sm:hidden items-center gap-2">
+            {STORE_MODE.cartEnabled && (
             <button
               onClick={() => setCartOpen(true)}
               className="relative flex items-center gap-1.5 p-2 text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
@@ -111,6 +115,7 @@ export function Navbar() {
                 </span>
               )}
             </button>
+            )}
             <button
               className="p-2 text-text-secondary hover:text-text-primary cursor-pointer"
               onClick={() => setMobileOpen(!mobileOpen)}
@@ -153,7 +158,7 @@ export function Navbar() {
         )}
       </nav>
 
-      {cartOpen && <CartModal onClose={() => setCartOpen(false)} />}
+      {STORE_MODE.cartEnabled && cartOpen && <CartModal onClose={() => setCartOpen(false)} />}
     </>
   );
 }

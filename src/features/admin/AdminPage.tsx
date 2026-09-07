@@ -7,8 +7,9 @@ import { ProductsAdmin } from "./ProductsAdmin.tsx";
 import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
 import { ShippingAdmin } from "./ShippingAdmin.tsx";
 import { ConfiguratorsAdmin } from "./ConfiguratorsAdmin.tsx";
+import { StoreModeAdmin } from "./StoreModeAdmin.tsx";
 
-type Tab = "colors" | "products" | "templates" | "shipping" | "configurators";
+type Tab = "colors" | "products" | "templates" | "shipping" | "configurators" | "storemode";
 
 function TelegramTestButton() {
   const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
@@ -93,7 +94,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
-        {(["colors", "products", "templates", "shipping", "configurators"] as Tab[]).map((t) => (
+        {(["colors", "products", "templates", "shipping", "configurators", "storemode"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -107,7 +108,8 @@ export function AdminPage() {
               : t === "products" ? "Products"
               : t === "templates" ? "Templates"
               : t === "shipping" ? "Shipping"
-              : "Configurators"}
+              : t === "configurators" ? "Configurators"
+              : "Store Mode"}
           </button>
         ))}
       </div>
@@ -117,6 +119,7 @@ export function AdminPage() {
       {tab === "templates" && <TemplatesAdmin />}
       {tab === "shipping" && <ShippingAdmin />}
       {tab === "configurators" && <ConfiguratorsAdmin />}
+      {tab === "storemode" && <StoreModeAdmin />}
     </div>
   );
 }

@@ -3,6 +3,25 @@ import type { Product } from "@/types/index.ts";
 import type { VariationConfig } from "@/types/index.ts";
 import type { ColorTemplate } from "@/types/index.ts";
 import type { ShippingRegion } from "@/data/shipping.ts";
+import type { StoreMode } from "@/data/storeMode.ts";
+
+export async function exportStoreModeTs(mode: StoreMode): Promise<void> {
+  const content = `export interface StoreMode {
+  cartEnabled: boolean;   // false = cart/checkout hidden, products link to Etsy
+  showPrices: boolean;    // false = prices masked with ***
+  showBanner: boolean;    // false = hides the top notice bar
+  bannerText: string;
+}
+
+export const STORE_MODE: StoreMode = {
+  cartEnabled: ${mode.cartEnabled},
+  showPrices: ${mode.showPrices},
+  showBanner: ${mode.showBanner},
+  bannerText: ${JSON.stringify(mode.bannerText)},
+};
+`;
+  downloadFile("storeMode.ts", content);
+}
 
 export async function exportColorsTs(colors: FilamentColor[]): Promise<void> {
   const lines = colors.map((c) => {

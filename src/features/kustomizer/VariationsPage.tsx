@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Navigate, useNavigate } from "react-router-
 import { VARIATION_CONFIGS_BY_ID } from "@/data/variationConfigs.ts";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
+import { STORE_MODE } from "@/data/storeMode.ts";
 import type { VariationGroup } from "@/types/index.ts";
 
 function buildOrderCode(selections: Record<string, string>): string {
@@ -24,7 +25,7 @@ function GroupSelector({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium text-text-primary">{group.name}</label>
-        {selectedOption?.priceDelta !== undefined && selectedOption.priceDelta > 0 && (
+        {STORE_MODE.showPrices && selectedOption?.priceDelta !== undefined && selectedOption.priceDelta > 0 && (
           <span className="text-xs text-accent">+CA${selectedOption.priceDelta.toFixed(2)}</span>
         )}
       </div>
@@ -149,7 +150,7 @@ export function VariationsPage() {
             <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Order Code</h2>
             {product && (
               <span className="text-lg font-bold text-text-primary">
-                CA${(product.price + priceDelta).toFixed(2)}
+                {STORE_MODE.showPrices ? `CA$${(product.price + priceDelta).toFixed(2)}` : "CA$•••"}
               </span>
             )}
           </div>
@@ -160,13 +161,14 @@ export function VariationsPage() {
           {product && (
             <button
               onClick={handleAddToCart}
-              disabled={!allSelected}
-              className={`w-full py-3 font-semibold rounded-xl transition-colors cursor-pointer
+              disabled={!allSelected || !STORE_MODE.cartEnabled}
+              title={!STORE_MODE.cartEnabled ? "Checkout is on Etsy right now — copy your code and order there." : undefined}
+              className={`w-full py-3 font-semibold rounded-xl transition-colors
                 flex items-center justify-center gap-2
                 ${added
-                  ? "bg-green-500/20 text-green-400"
-                  : allSelected
-                    ? "bg-accent text-[#0f0f0f] hover:bg-accent-hover"
+                  ? "bg-green-500/20 text-green-400 cursor-pointer"
+                  : allSelected && STORE_MODE.cartEnabled
+                    ? "bg-accent text-[#0f0f0f] hover:bg-accent-hover cursor-pointer"
                     : "bg-surface-elevated text-text-muted cursor-not-allowed opacity-50"
                 }`}
             >

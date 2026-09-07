@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { PRODUCTS } from "@/data/products.ts";
 import { SITE } from "@/config/site.ts";
+import { STORE_MODE } from "@/data/storeMode.ts";
 import { Carousel } from "@/components/ui/Carousel.tsx";
 import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
 import { cartStore } from "@/data/cartStore.ts";
@@ -119,6 +120,14 @@ function NotifyModal({ product, type, onClose }: {
   );
 }
 
+/** Price display — masked while STORE_MODE.showPrices is off. */
+function Price({ amount, className }: { amount: number; className: string }) {
+  if (!STORE_MODE.showPrices) {
+    return <span className={className} title="See price on Etsy">CA$•••</span>;
+  }
+  return <span className={className}>CA${amount.toFixed(2)}</span>;
+}
+
 function ProductCard({ product }: { product: Product }) {
   const images = getImages(product);
   const badges = getBadges(product);
@@ -193,17 +202,17 @@ function ProductCard({ product }: { product: Product }) {
               <span className="text-xl font-bold text-text-muted tracking-widest">???</span>
             ) : isOutOfStock ? (
               <div>
-                <span className="text-xl font-bold text-text-muted line-through">
-                  CA${product.price.toFixed(2)}
-                </span>
+                <Price amount={product.price} className="text-xl font-bold text-text-muted line-through" />
                 <p className="text-xs text-red-400 mt-0.5 font-medium">Out of stock</p>
               </div>
             ) : product.price > 0 ? (
               <>
-                <span className="text-xl font-bold text-text-primary">
-                  CA${product.price.toFixed(2)}
-                </span>
-                <p className="text-xs text-text-muted mt-0.5">Prices in CAD. Final price at checkout.</p>
+                <Price amount={product.price} className="text-xl font-bold text-text-primary" />
+                <p className="text-xs text-text-muted mt-0.5">
+                  {STORE_MODE.showPrices
+                    ? "Prices in CAD. Final price at checkout."
+                    : "See price on Etsy."}
+                </p>
               </>
             ) : (
               <span className="text-sm font-medium text-text-muted">Coming soon</span>
@@ -242,7 +251,18 @@ function ProductCard({ product }: { product: Product }) {
                     Customize
                   </Link>
                 )}
-                {product.price > 0 && (
+                {!STORE_MODE.cartEnabled ? (
+                  // Cart off: send the buyer straight to this product's Etsy listing.
+                  <a
+                    href={product.etsyUrl ?? SITE.etsyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold rounded-lg
+                               hover:bg-accent-hover transition-colors whitespace-nowrap"
+                  >
+                    Buy on Etsy ↗
+                  </a>
+                ) : product.price > 0 && (
                   <button
                     onClick={handleAddToCart}
                     title="Add to cart"

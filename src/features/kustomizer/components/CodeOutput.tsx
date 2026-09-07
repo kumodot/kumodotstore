@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { STORE_MODE } from "@/data/storeMode.ts";
 
 interface CodeOutputProps {
   code: string;
@@ -8,6 +9,7 @@ interface CodeOutputProps {
 }
 
 export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeOutputProps) {
+  const cartDisabled = !STORE_MODE.cartEnabled;
   const [copied, setCopied] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -69,11 +71,15 @@ export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeO
           {onAddToCart && (
             <button
               onClick={handleAddToCart}
+              disabled={cartDisabled}
+              title={cartDisabled ? "Checkout is on Etsy right now — copy your code and order there." : undefined}
               className={`flex-1 sm:flex-none px-4 py-2 font-medium rounded-lg transition-colors
-                         whitespace-nowrap cursor-pointer flex items-center justify-center gap-2
-                         ${added
-                           ? "bg-green-500/20 text-green-400"
-                           : "bg-accent text-[#0f0f0f] hover:bg-accent-hover"
+                         whitespace-nowrap flex items-center justify-center gap-2
+                         ${cartDisabled
+                           ? "bg-surface-elevated border border-border text-text-muted opacity-50 cursor-not-allowed"
+                           : added
+                           ? "bg-green-500/20 text-green-400 cursor-pointer"
+                           : "bg-accent text-[#0f0f0f] hover:bg-accent-hover cursor-pointer"
                          }`}
             >
               {added ? (editMode ? "Updated ✓" : "Added ✓") : (
