@@ -4,6 +4,7 @@ import { VARIATION_CONFIGS_BY_ID } from "@/data/variationConfigs.ts";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
 import { STORE_MODE } from "@/data/storeMode.ts";
+import { GlitchTitle } from "@/components/ui/GlitchTitle.tsx";
 import type { VariationGroup } from "@/types/index.ts";
 
 function buildOrderCode(selections: Record<string, string>): string {
@@ -24,7 +25,7 @@ function GroupSelector({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-text-primary">{group.name}</label>
+        <label className="ks text-2xl text-text-primary">{group.name.toUpperCase()}</label>
         {STORE_MODE.showPrices && selectedOption?.priceDelta !== undefined && selectedOption.priceDelta > 0 && (
           <span className="text-xs text-accent">+CA${selectedOption.priceDelta.toFixed(2)}</span>
         )}
@@ -35,7 +36,7 @@ function GroupSelector({
           <button
             key={option.id}
             onClick={() => onSelect(option.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border
+            className={`px-4 py-2 min-h-11 text-xs font-medium uppercase tracking-[.06em] transition-colors cursor-pointer border
               ${selected === option.id
                 ? "bg-accent text-[#0f0f0f] border-accent"
                 : "bg-surface border-border text-text-secondary hover:border-text-secondary hover:text-text-primary"
@@ -118,9 +119,7 @@ export function VariationsPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-red-500">K</span><span className="text-accent">ustomizer</span>
-        </h1>
+        <GlitchTitle as="h1" className="ks text-3xl text-text-primary" text="KUSTOMIZER" />
         <p className="text-sm text-text-secondary mt-1">{config.name}</p>
         {product && (
           <p className="text-xs text-text-muted mt-1">Configuring: {product.name}</p>
@@ -147,9 +146,9 @@ export function VariationsPage() {
         {/* Order code + price */}
         <div className="bg-surface-card border border-border rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider">Order Code</h2>
+            <h2 className="ks text-2xl text-text-primary">ORDER CODE</h2>
             {product && (
-              <span className="text-lg font-bold text-text-primary">
+              <span className="font-mono text-lg font-medium text-text-primary">
                 {STORE_MODE.showPrices ? `CA$${(product.price + priceDelta).toFixed(2)}` : "CA$•••"}
               </span>
             )}
