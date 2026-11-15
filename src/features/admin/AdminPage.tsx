@@ -45,6 +45,16 @@ export function AdminPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="mb-6 border border-border-light bg-surface-card p-4 text-sm text-text-secondary">
+        <p className="mono text-accent mb-2">HOW TO UPDATE THE STORE</p>
+        <ol className="space-y-1 list-decimal list-inside">
+          <li>Change things in the tabs below (they stay in this browser as a draft).</li>
+          <li>On the tab, press <b>Export</b> and save the file over the one in <code>src\data</code> that the button names.</li>
+          <li>Double-click <b>publish.bat</b> in the project folder. It checks the build, then publishes.</li>
+          <li>Wait about 90 seconds and look at the live store.</li>
+        </ol>
+        <p className="mt-2 text-xs text-text-muted">This admin only runs on this computer (admin-local.bat). It is not part of the public site.</p>
+      </div>
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>

@@ -16,6 +16,7 @@ import { ColorLegend } from "./components/ColorLegend.tsx";
 import { GlitchTitle } from "@/components/ui/GlitchTitle.tsx";
 import { isSoundOn, setSoundOn } from "@/utils/glitchSound.ts";
 import { KUSTOMIZER_PRODUCTS } from "@/data/kustomizerProducts.ts";
+import { offeredColors } from "@/data/colorAvailability.ts";
 
 // three.js only loads when a buyer opens an FM1 kit, POKZ stays as light as before.
 const Fm1Kustomizer = lazy(() =>
@@ -86,7 +87,7 @@ export function KustomizerPage() {
     );
   }
 
-  const colorOptions = colorsStore.getColors().filter((c) => c.available).map((c) => ({
+  const colorOptions = offeredColors("pokz", colorsStore.getColors()).map((c) => ({
     id: c.id,
     name: c.name,
     rgb: c.rgb,

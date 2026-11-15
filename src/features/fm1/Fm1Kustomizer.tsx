@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { colorsStore } from "@/data/colorsStore.ts";
 import { SITE } from "@/config/site.ts";
+import { offeredColors } from "@/data/colorAvailability.ts";
 import { NotifyModal } from "@/components/ui/NotifyModal.tsx";
 import { OrderCopiedModal } from "@/components/ui/OrderCopiedModal.tsx";
 import { exportFm1Image } from "./fm1Image.ts";
@@ -15,7 +16,7 @@ import { Fm1Thumb } from "./Fm1Thumb.tsx";
 import { Fm1TopView } from "./Fm1TopView.tsx";
 import { Fm1Scene, type Pick as ScenePick } from "./fm1Scene.ts";
 import {
-  FACTORY_COLORS, FIXED_THEMES, FM1_VERSION, loadSaved, storeSaved, type FactoryId,
+  FACTORY_COLORS, FIXED_THEMES, FM1_VERSION, KNOB_SPECS, loadSaved, storeSaved, type FactoryId,
 } from "./fm1Data.ts";
 
 type Target =
@@ -28,13 +29,15 @@ const cloneBuild = (b: Fm1Build): Fm1Build => JSON.parse(JSON.stringify(b));
 
 export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const info = KUSTOMIZER_PRODUCTS.find((p) => p.kind === (mode === "case" ? "fm1-case" : "fm1-knobs"))!;
-  const colors = colorsStore.getColors().filter((c) => c.available);
-  const hex = (id: string) => colors.find((c) => c.id === id)?.hex ?? "#888888";
+  const allColors = colorsStore.getColors();
+  const colors = offeredColors("fm1-kz", allColors);   // what the tray offers (see src/data/colorAvailability.ts)
+  const hex = (id: string) => allColors.find((c) => c.id === id)?.hex ?? "#888888";   // any color still draws, even if no longer offered
 
   const start = (): Fm1Build => ({ ...cloneBuild(FIXED_THEMES[0].build), mode });
   const [build, setBuild] = useState<Fm1Build>(start);
   const [factory, setFactory] = useState<FactoryId>("beige1");
-  const [target, setTarget] = useState<Target>({ k: "fp", part: "body" });
+  // knobs-only has no faceplate: start on the left knob group so a color click does something
+  const [target, setTarget] = useState<Target>(mode === "case" ? { k: "fp", part: "body" } : { k: "group", g: "L", part: "body" });
   const [selKnob, setSelKnob] = useState<Slot | null>(null);
   const [themeId, setThemeId] = useState<string>(FIXED_THEMES[0].id);
   const [saved, setSaved] = useState(loadSaved);
@@ -99,7 +102,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     if (target.k === "fp") return fpName[target.part];
     const which = target.part === "body" ? "BODY" : "CAP";
     if (target.k === "group") {
-      return `KNOBS ${GROUPS[target.g].map((s) => SLOT_LABEL[s]).join(" ")} · ${which}S`;
+      return `KNOBS ${GROUPS[target.g].map((s) => SLOT_LABEL[s]).join(" ")} · ${target.part === "body" ? "BODIES" : "CAPS"}`;
     }
     return `KNOB ${SLOT_LABEL[target.slot]} · ${which}`;
   }, [target, hover]);
@@ -262,7 +265,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               </div>
               <div className="flex gap-3">
                 {/* high quality picture, only when renders exist for this variant (see public/renders/README.md) */}
-                <KnobRender style={sel.style} height={sel.height} body={hex(sel.body)} cap={hex(sel.cap)} size={112} className="shrink-0 self-center" />
+                <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} size={112} className="shrink-0 self-center" />
                 <div className="flex-1 min-w-0">
                   <div className="flex gap-2 mb-2">
                     {(["body", "cap"] as const).map((part) => (
@@ -276,11 +279,19 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                     {([["classic", "short", "Classic"], ["groove", "short", "Groove"], ["groove", "long", "Groove long"]] as const).map(([st, h, label]) => (
                       <button key={label} onClick={() => setVariant(selKnob, { style: st, height: h })}
                         className={`px-3 py-2 text-sm border cursor-pointer min-h-11 flex flex-col items-center gap-1 ${sel.style === st && sel.height === h ? "border-accent text-accent" : "border-border text-text-muted"}`}>
-                        <KnobRender style={st} height={h} body={hex(sel.body)} cap={hex(sel.cap)} size={44} />
+                        <KnobRender style={st} height={h} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} size={44} />
                         {label}
                       </button>
                     ))}
                   </div>
+                  {(() => {
+                    const sp = KNOB_SPECS[`${sel.style}_${sel.height}`];
+                    return sp && (
+                      <p className="mono mt-2 text-text-muted">
+                        {sp.name}: {sp.d.toFixed(2)} cm wide, {sp.h.toFixed(2)} cm tall
+                      </p>
+                    );
+                  })()}
                 </div>
               </div>
             </section>

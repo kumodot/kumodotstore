@@ -44,6 +44,7 @@ export class Fm1Scene {
   onPick: (p: Pick | null) => void = () => {};
   onHover: (p: Pick | null) => void = () => {};
   private hoverNames = new Set<string>();
+  private ghostEdges: THREE.LineSegments[] = [];   // outline of the device, shown in the knobs-only x-ray look
 
   private el: HTMLElement;
   constructor(el: HTMLElement) {
@@ -121,6 +122,18 @@ export class Fm1Scene {
       this.mats[mat.name] = mat;
     });
     this.scene.add(gltf.scene);
+    // thin outlines for the parts that turn into a ghost in knobs-only mode
+    for (const m of this.meshes) {
+      if (!["fm1_device_body", "fm1_keys", "fm1_screen"].includes(m.name)) continue;
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(m.geometry, 25),
+        new THREE.LineBasicMaterial({ color: 0xb8bcc4, transparent: true, opacity: 0.6 }),
+      );
+      edges.visible = false;
+      edges.userData.owner = m;
+      m.add(edges);
+      this.ghostEdges.push(edges);
+    }
     const box = (name: string) =>
       new THREE.Box3().setFromObject(this.meshes.find((m) => m.name === name)!);
     const fp = box("faceplate_body");
@@ -159,6 +172,20 @@ export class Fm1Scene {
       set(`mat_knob_${s}_cap`, hex(b.knobs[s].cap));
     }
     const caseMode = b.mode === "case";
+    // Knobs-only: the device turns into a translucent x-ray ghost, only the knobs stay opaque
+    for (const n of ["mat_fm1_device_body", "mat_fm1_keys", "mat_fm1_screen"]) {
+      const m = this.mats[n];
+      if (!m) continue;
+      m.transparent = !caseMode;
+      m.opacity = caseMode ? 1 : 0.13;
+      m.depthWrite = caseMode;
+      m.needsUpdate = true;
+    }
+    const ghostTint = new THREE.Color(f.body).lerp(new THREE.Color("#ffffff"), 0.45);   // lighter than the device color so it reads on dark
+    for (const e of this.ghostEdges) {
+      (e.material as THREE.LineBasicMaterial).color.copy(ghostTint);
+      e.visible = !caseMode;
+    }
     for (const m of this.meshes) {
       const n = m.name;
       let vis = true;

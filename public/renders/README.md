@@ -6,7 +6,9 @@ picture cannot be printed. Keep it that way.
 
 ## Files, per variant
 
-Variants are `<style>_<height>`: `classic_short`, `groove_short`, `groove_long`.
+Variants are `<style>_<height>`: `classic_short`, `groove_short`, `groove_long` (and `classic_long` once it exists).
+
+The **volume knob** has its own cap shape. If it also looks different, add entries named `vol_<style>_<height>` (for example `vol_groove_short`): the volume knob uses them first and falls back to the plain entry.
 
 | File | What it is |
 |---|---|

@@ -48,6 +48,13 @@ export const FIXED_THEMES: { id: string; name: string; build: Fm1Build }[] = [
   },
 ];
 
+/** Real knob sizes in cm (diameter x height). From Marcelo. Classic short height is with the cap. */
+export const KNOB_SPECS: Record<string, { name: string; d: number; h: number }> = {
+  classic_short: { name: "Classic", d: 1.19, h: 1.01 },
+  groove_short: { name: "Groove", d: 1.2, h: 0.81 },
+  groove_long: { name: "Groove long", d: 1.2, h: 1.1 },
+};
+
 export const SAVED_KEY = "kumodot_fm1_saved_v1";
 export function loadSaved(): { id: string; name: string; code: string }[] {
   try { return JSON.parse(localStorage.getItem(SAVED_KEY) ?? "[]"); } catch { return []; }

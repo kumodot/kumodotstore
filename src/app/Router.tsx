@@ -1,9 +1,15 @@
+import { lazy, Suspense } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./Layout.tsx";
 import { StorefrontPage } from "@/features/storefront/StorefrontPage.tsx";
 import { KustomizerPage } from "@/features/kustomizer/KustomizerPage.tsx";
 import { VariationsPage } from "@/features/kustomizer/VariationsPage.tsx";
-import { AdminPage } from "@/features/admin/AdminPage.tsx";
+// The admin only exists in the local dev server (admin-local.bat). In the production build
+// import.meta.env.DEV is false, so the whole admin and the Telegram test code are left out of the
+// public bundle: nothing sensitive ships to visitors.
+const AdminPage = import.meta.env.DEV
+  ? lazy(() => import("@/features/admin/AdminPage.tsx").then((m) => ({ default: m.AdminPage })))
+  : null;
 
 export function AppRouter() {
   return (
@@ -19,7 +25,9 @@ export function AppRouter() {
           <Route path="kustomize" element={<KustomizerPage />} />
           <Route path="kustomize/:modelId" element={<KustomizerPage />} />
           <Route path="configure/:configId" element={<VariationsPage />} />
-          <Route path="admin_k9x7m" element={<AdminPage />} />
+          {AdminPage && (
+            <Route path="admin_k9x7m" element={<Suspense fallback={null}><AdminPage /></Suspense>} />
+          )}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

@@ -29,3 +29,4 @@ push-products.bat
 *.sln
 *.sw?
 kustomizer-fm1-dev.bat
+publish.bat
