@@ -116,7 +116,7 @@ export function VariationsPage() {
   };
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-text-primary">
           <span className="text-red-500">K</span><span className="text-accent">ustomizer</span>

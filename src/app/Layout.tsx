@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import { Backdrop } from "@/components/layout/Backdrop.tsx";
 import { Navbar } from "@/components/layout/Navbar.tsx";
 import { Footer } from "@/components/layout/Footer.tsx";
 import { PrivacyBanner } from "@/components/layout/PrivacyBanner.tsx";
@@ -7,9 +8,10 @@ import { STORE_MODE } from "@/data/storeMode.ts";
 
 export function Layout() {
   return (
-    <div className="min-h-screen flex flex-col bg-surface text-text-primary">
+    <div className="min-h-screen flex flex-col text-text-primary">
+      <Backdrop />
       {STORE_MODE.showBanner && (
-        <div className="bg-accent text-[#0f0f0f] text-xs sm:text-sm text-center py-2 px-4 font-medium">
+        <div className="bg-accent text-[#0f0f0f] font-mono uppercase tracking-wider text-[11px] sm:text-xs text-center py-2 px-4 font-medium">
           {STORE_MODE.bannerText}{" "}
           <a
             href={SITE.etsyUrl}

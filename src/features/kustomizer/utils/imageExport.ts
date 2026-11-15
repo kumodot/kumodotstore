@@ -14,7 +14,7 @@ export async function exportGridAsImage(
   title.textContent = templateName || "Custom";
   title.style.marginBottom = "12px";
   title.style.textAlign = "center";
-  title.style.fontFamily = "Inter, sans-serif";
+  title.style.fontFamily = "'Martian Mono', monospace";
   title.style.color = "#f0f0f0";
   title.style.fontSize = "14px";
   container.appendChild(title);

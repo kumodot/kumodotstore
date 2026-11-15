@@ -13,7 +13,7 @@ function InstagramIcon() {
 export function Footer() {
   return (
     <footer className="border-t border-border mt-auto">
-      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center
+      <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center
                       justify-between gap-3 text-xs text-text-muted">
         <span>&copy; {new Date().getFullYear()} kumodot</span>
 

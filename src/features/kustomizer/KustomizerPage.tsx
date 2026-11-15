@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
@@ -8,10 +8,26 @@ import { colorsStore } from "@/data/colorsStore.ts";
 import { useKustomizer } from "./hooks/useKustomizer.ts";
 import { exportGridAsImage } from "./utils/imageExport.ts";
 import { ButtonGrid } from "./components/ButtonGrid.tsx";
-import { TemplateSelector } from "./components/TemplateSelector.tsx";
+import { ThemeFilmstrip } from "@/components/ui/ThemeFilmstrip.tsx";
+import { PokzThumb } from "./components/PokzThumb.tsx";
 import { CodeInput } from "./components/CodeInput.tsx";
 import { CodeOutput } from "./components/CodeOutput.tsx";
 import { ColorLegend } from "./components/ColorLegend.tsx";
+import { GlitchTitle } from "@/components/ui/GlitchTitle.tsx";
+import { isSoundOn, setSoundOn } from "@/utils/glitchSound.ts";
+import { KUSTOMIZER_PRODUCTS } from "@/data/kustomizerProducts.ts";
+
+// three.js only loads when a buyer opens an FM1 kit, POKZ stays as light as before.
+const Fm1Kustomizer = lazy(() =>
+  import("@/features/fm1/Fm1Kustomizer.tsx").then((m) => ({ default: m.Fm1Kustomizer }))
+);
+
+// Themes the buyer saved for a case model. Stored in this browser only (localStorage), never sent anywhere.
+type SavedTheme = { name: string; code: string };
+const savedKey = (modelId: string) => `kumodot_saved_themes_v1_${modelId}`;
+function loadSavedThemes(modelId: string): SavedTheme[] {
+  try { return JSON.parse(localStorage.getItem(savedKey(modelId)) ?? "[]"); } catch { return []; }
+}
 
 export function KustomizerPage() {
   const { modelId } = useParams<{ modelId: string }>();
@@ -34,6 +50,21 @@ export function KustomizerPage() {
   const templates = TEMPLATES[model?.id] ?? [];
 
   const kustomizer = useKustomizer(model, templates);
+  const [sound, setSound] = useState(isSoundOn);
+  const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => loadSavedThemes(model.id));
+  useEffect(() => { setSavedThemes(loadSavedThemes(model.id)); }, [model.id]);
+  const persistSaved = (list: SavedTheme[]) => {
+    setSavedThemes(list);
+    try { localStorage.setItem(savedKey(model.id), JSON.stringify(list)); } catch { /* private mode */ }
+  };
+
+  // Which kit: ?kit= picks one, anything else (including old links) is POKZ.
+  const kit = KUSTOMIZER_PRODUCTS.find((p) => p.id === searchParams.get("kit")) ?? KUSTOMIZER_PRODUCTS[0];
+  const pickKit = (id: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (id === KUSTOMIZER_PRODUCTS[0].id) next.delete("kit"); else next.set("kit", id);
+    navigate(`/kustomize${next.size ? `?${next}` : ""}`, { replace: true });
+  };
 
   useEffect(() => {
     if (editCode) {
@@ -70,13 +101,66 @@ export function KustomizerPage() {
     }
   };
 
+  const picker = (
+    <div className="flex gap-2 sm:gap-3 justify-center mb-6" role="tablist" aria-label="Choose your product">
+      {KUSTOMIZER_PRODUCTS.map((p) => (
+        <button
+          key={p.id}
+          role="tab"
+          aria-selected={p.id === kit.id}
+          onClick={() => pickKit(p.id)}
+          className={`group flex-1 max-w-44 border p-1.5 cursor-pointer text-center transition-colors duration-[450ms]
+                      ${p.id === kit.id ? "border-accent bg-surface-card" : "border-border hover:border-accent"}`}
+        >
+          <span className="block overflow-hidden bg-[#050505]">
+            <img src={p.image} alt="" className="w-full aspect-[4/3] object-cover transition-transform duration-[450ms] ease-[cubic-bezier(.4,0,.2,1)] group-hover:scale-[1.2]" loading="lazy" />
+          </span>
+          <GlitchTitle as="span" className="ks block text-lg sm:text-xl text-text-primary mt-2" text={p.name.toUpperCase()} auto={false} />
+          {!p.launched && <span className="mono block text-accent mt-0.5">coming soon</span>}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (kit.kind !== "grid") {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="text-center mb-4">
+          <GlitchTitle as="h1" className="ks text-3xl text-text-primary" text="KUSTOMIZER" />
+          <p className="text-sm text-text-secondary mt-1">{kit.tagline}</p>
+        </div>
+        {picker}
+        <Suspense fallback={<p className="text-center text-text-muted py-16">Loading 3D preview…</p>}>
+          <Fm1Kustomizer key={kit.id} mode={kit.kind === "fm1-case" ? "case" : "knobs"} />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
+    <div className="relative max-w-7xl mx-auto px-4 py-8">
+      {/* glitch sound switch: just an icon in the corner (speaker open / speaker crossed out) */}
+      <button
+        onClick={() => { setSoundOn(!sound); setSound(!sound); }}
+        aria-label={sound ? "Sound on, click to mute" : "Sound off, click to unmute"}
+        aria-pressed={sound}
+        title={sound ? "Sound on" : "Sound off"}
+        className="absolute right-4 top-3 w-10 h-10 flex items-center justify-center text-text-muted
+                   hover:text-accent transition-colors cursor-pointer"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="square">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+          {sound ? (
+            <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />
+          ) : (
+            <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />
+          )}
+        </svg>
+      </button>
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">
-          <span className="text-red-500">K</span><span className="text-accent">ustomizer</span>
-        </h1>
+        <GlitchTitle as="h1" className="ks text-3xl text-text-primary" text="KUSTOMIZER" />
         <p className="text-sm text-text-secondary mt-1">{model.description}</p>
+        <div className="mt-4 -mb-2">{picker}</div>
 
         {CASE_MODELS.length > 1 && (
           <div className="mt-3">
@@ -104,17 +188,38 @@ export function KustomizerPage() {
         )}
       </div>
 
-      <div className="space-y-4">
-        <TemplateSelector
-          templates={templates}
-          selectedTemplate={kustomizer.selectedTemplate}
-          onSelect={kustomizer.applyTemplate}
+      <div className="space-y-6">
+        <ThemeFilmstrip
+          aspect="aspect-[3/4]"
+          items={[
+            ...templates.map((t) => ({ id: t.name, name: t.name, thumb: <PokzThumb code={t.code} />, removable: false })),
+            ...savedThemes.map((t) => ({ id: t.name, name: t.name, thumb: <PokzThumb code={t.code} />, removable: true })),
+          ]}
+          activeId={kustomizer.selectedTemplate?.name ?? null}
+          onSelect={(id) => {
+            const t = templates.find((x) => x.name === id) ?? savedThemes.find((x) => x.name === id);
+            if (t) kustomizer.applyTemplate(t);
+          }}
+          onSave={() => {
+            const n = Math.max(0, ...savedThemes.map((t) => Number(/^Custom (\d+)$/.exec(t.name)?.[1] ?? 0))) + 1;
+            persistSaved([...savedThemes, { name: `Custom ${n}`, code: kustomizer.formattedOrderCode }]);
+          }}
+          onRemove={(id) => persistSaved(savedThemes.filter((t) => t.name !== id))}
         />
 
-        <CodeInput onApply={kustomizer.applyCode} />
-
-        <ButtonGrid
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
+          <div className="lg:sticky lg:top-24">
+            <div className="text-center mb-2">
+              <GlitchTitle as="h2" className="ks text-2xl text-text-primary block !leading-none" text="DO YOUR OWN" />
+              <span className="mono block mt-1">(CLICK the BUTTONS)</span>
+              {/* the loaded theme; turns into CUSTOM as soon as a pad is changed */}
+              <span className="mono block mt-2 text-text-primary">
+                LOADED: <span className="text-accent">{(kustomizer.selectedTemplate?.name ?? "Custom").toUpperCase()}</span>
+              </span>
+            </div>
+          <ButtonGrid
           ref={gridRef}
+          glitchTick={kustomizer.loadTick}
           model={model}
           selectedColors={kustomizer.selectedColors}
           activeButtonIndex={kustomizer.activeButtonIndex}
@@ -126,6 +231,10 @@ export function KustomizerPage() {
           onColorSelect={kustomizer.updateButtonColor}
           colorOptions={colorOptions}
         />
+
+          </div>
+          <div className="space-y-4">
+        <CodeInput onApply={kustomizer.applyCode} />
 
         <CodeOutput
           code={kustomizer.formattedOrderCode}
@@ -142,6 +251,8 @@ export function KustomizerPage() {
         />
 
         <ColorLegend />
+          </div>
+        </div>
       </div>
     </div>
   );

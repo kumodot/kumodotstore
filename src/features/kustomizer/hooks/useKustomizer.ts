@@ -11,6 +11,8 @@ export function useKustomizer(model: CaseModel, templates: ColorTemplate[]) {
     return Array(model.buttonCount).fill(model.defaultColorId);
   });
   const [activeButtonIndex, setActiveButtonIndex] = useState<number | null>(null);
+  // bumps when a whole theme or code is loaded (not on single-button edits): drives the pad glitch
+  const [loadTick, setLoadTick] = useState(0);
   const [selectedTemplate, setSelectedTemplate] = useState<ColorTemplate | null>(
     templates[0] ?? null
   );
@@ -36,6 +38,7 @@ export function useKustomizer(model: CaseModel, templates: ColorTemplate[]) {
         setSelectedColors(sliced);
         setSelectedTemplate(template);
         setActiveButtonIndex(null);
+        setLoadTick((t) => t + 1);
       }
     },
     [model.buttonCount]
@@ -64,6 +67,7 @@ export function useKustomizer(model: CaseModel, templates: ColorTemplate[]) {
 
       const sliced = codes.slice(0, model.buttonCount);
       setSelectedColors(sliced);
+      setLoadTick((t) => t + 1);
       const match = findMatchingTemplate(sliced);
       setSelectedTemplate(
         match ?? { name: "Custom", code: formatOrderCode(sliced, model) }
@@ -90,6 +94,7 @@ export function useKustomizer(model: CaseModel, templates: ColorTemplate[]) {
 
   return {
     selectedColors,
+    loadTick,
     activeButtonIndex,
     selectedTemplate,
     formattedOrderCode,

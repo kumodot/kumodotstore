@@ -1,29 +1,44 @@
 @import "tailwindcss";
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
-@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/martian-mono/400.css";
+@import "@fontsource/martian-mono/500.css";
+
+/* kumodot brand kit v1.2: Signal (dark) palette. Two faces only: Kumo Signal for big text,
+   Martian Mono for everything small. (The kit also lists Archivo for running text; dropped on purpose.) */
+@font-face {
+  font-family: "Kumo Signal";
+  src: url("./assets/fonts/KumoSignal-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 @theme {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono Variable", monospace;
+  --font-sans: "Martian Mono", ui-monospace, Consolas, monospace;
+  --font-mono: "Martian Mono", ui-monospace, Consolas, monospace;
+  --font-display: "Kumo Signal", "Martian Mono", ui-monospace, monospace;
 
-  --color-surface: #0f0f0f;
-  --color-surface-elevated: #1a1a1a;
-  --color-surface-card: #222222;
-  --color-surface-hover: #2a2a2a;
-  --color-border: #333333;
-  --color-border-light: #444444;
+  /* the brand lives on a pixel grid: square corners */
+  --radius-xs: 0; --radius-sm: 0; --radius-md: 0; --radius-lg: 0;
+  --radius-xl: 0; --radius-2xl: 0; --radius-3xl: 0; --radius-4xl: 0;
 
-  --color-accent: #45ccf5;
-  --color-accent-hover: #5dd6f8;
-  --color-accent-muted: #45ccf540;
+  --color-surface: #0D0D0C;
+  --color-surface-elevated: #151514;
+  --color-surface-card: #1D1C1A;
+  --color-surface-hover: #2A2926;
+  --color-border: #2A2926;
+  --color-border-light: #3B3A36;
 
-  --color-text-primary: #f0f0f0;
-  --color-text-secondary: #a0a0a0;
-  --color-text-muted: #666666;
+  --color-accent: #FF5A1F;
+  --color-accent-hover: #FF7142;
+  --color-accent-muted: #FF5A1F40;
+
+  --color-text-primary: #EEECE6;
+  --color-text-secondary: #A3A09A;
+  --color-text-muted: #8C8A85;
 }
+
+/* Kumo Signal is caps-only and made for 24px and up: titles, section marks. */
+.ks { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; line-height: 1.25; font-kerning: normal; }
 
 body {
   font-family: var(--font-sans);
@@ -40,3 +55,58 @@ body {
   background: var(--color-border);
   border-radius: 3px;
 }
+
+/* ---- kumodot brand kit v1.2, ported from kumodot.art ---- */
+body { font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; overflow-x: hidden; }
+::selection { background: var(--color-accent); color: #0D0D0C; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+h1, h2 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; line-height: 1.25; text-wrap: balance; }
+/* labels, buttons and metadata speak mono, uppercase */
+button, .mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; }
+.mono { font-size: 11px; color: var(--color-text-muted); }
+a:hover { color: var(--color-accent); }
+a[class*="bg-accent"]:hover { color: #0D0D0C; }
+
+/* backdrop: K texture, fixed glow, light sweep, LED trail */
+:root { --bd-k: #EEECE6; --bd-light: #FFF6EC; --bd-base: .04; --bd-glow: .12; --bd-trail: .08; }
+.backdrop { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.backdrop__k, .backdrop__gl, .backdrop__trail {
+  position: absolute; inset: 0;
+  --bd-vignette: radial-gradient(ellipse 70% 60% at 50% 55%, #000 0%, rgba(0,0,0,.55) 45%, transparent 80%);
+  -webkit-mask-size: var(--bd-w) var(--bd-h), 100% 100%; mask-size: var(--bd-w) var(--bd-h), 100% 100%;
+  -webkit-mask-repeat: repeat, no-repeat; mask-repeat: repeat, no-repeat;
+  -webkit-mask-position: 0 var(--bd-y, 0px), 0 0; mask-position: 0 var(--bd-y, 0px), 0 0;
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.backdrop__k { background: var(--bd-k); opacity: var(--bd-base); -webkit-mask-image: var(--bd-base-tile), var(--bd-vignette); mask-image: var(--bd-base-tile), var(--bd-vignette); }
+.backdrop__gl { opacity: var(--bd-glow); -webkit-mask-image: var(--bd-gloss-tile), var(--bd-vignette); mask-image: var(--bd-gloss-tile), var(--bd-vignette); }
+.backdrop__spot {
+  position: absolute; left: 50%; top: 50%; width: 1100px; height: 1100px; margin: -550px 0 0 -550px; border-radius: 50%;
+  background: radial-gradient(circle, var(--bd-light) 0%, color-mix(in srgb, var(--bd-light) 35%, transparent) 35%, transparent 65%);
+  will-change: transform; animation: bd-sweep 8s ease-in-out infinite alternate;
+}
+@keyframes bd-sweep { 0% { transform: translate(-70vw, -45vh); } 50% { transform: translate(5vw, 15vh); } 100% { transform: translate(70vw, -25vh); } }
+@media (prefers-reduced-motion: reduce) { .backdrop__spot { animation: none; transform: none; } }
+.backdrop__trail { opacity: var(--bd-trail); -webkit-mask-image: none; mask-image: none; }
+.backdrop__led {
+  position: absolute; left: 0; top: 0; width: var(--k-w); height: var(--k-h); opacity: 0; background: var(--bd-light);
+  -webkit-mask: var(--k-up) center / 100% 100% no-repeat; mask: var(--k-up) center / 100% 100% no-repeat; will-change: opacity;
+}
+.backdrop__led.is-mir { -webkit-mask-image: var(--k-mir); mask-image: var(--k-mir); }
+.backdrop__led.is-on { animation: bd-led 1.4s cubic-bezier(.2,.6,.3,1) forwards; }
+@keyframes bd-led { 0% { opacity: .4; } 12% { opacity: 1; } 100% { opacity: 0; } }
+
+/* primary button: orange fill slides in on hover (same as the site's .btn) */
+.btn-brand { position: relative; overflow: hidden; isolation: isolate; }
+.btn-brand::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--color-accent); transform: translateX(-101%); transition: transform 450ms cubic-bezier(.4,0,.2,1); }
+.btn-brand:hover::before { transform: none; }
+
+/* Kumo Signal glitch letters (classes from the kit's kumo-signal.css) */
+.g-hollow { font-feature-settings: "ss01" 1; }
+.g-lo { font-feature-settings: "ss02" 1; }
+.g-hi { font-feature-settings: "ss03" 1; }
+.g-slice { display: inline-block; position: relative; color: transparent; }
+.g-slice::before, .g-slice::after { content: attr(data-ch); position: absolute; left: 0; top: 0; color: var(--color-text-primary); }
+.g-slice::before { clip-path: inset(0 0 55% 0); }
+.g-slice::after { clip-path: inset(45% 0 0 0); transform: translateX(.06em); color: var(--color-accent); }
+[data-glitch] .g-lo, [data-glitch] .g-hi, [data-glitch] .g-hollow, [data-glitch] .g-slice { display: inline-block; }

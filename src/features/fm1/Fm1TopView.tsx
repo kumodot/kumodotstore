@@ -1,0 +1,173 @@
+import { useId, type ReactNode } from "react";
+import { GROUPS, SLOT_LABEL, type Fm1Build, type Slot } from "./fm1Code.ts";
+import { FM1_TOP } from "./fm1TopShapes.ts";
+import { logoColor } from "./fm1Color.ts";
+
+// Top view of the FM1 built from the vectorized reference (fm1TopShapes.ts). One component draws both
+// the filmstrip thumbnails (no handlers) and the big click-to-customize panel (handlers + group frames).
+// Layers, bottom to top: device body, rubber keys, screen, faceplate (with real cutouts), bezel, knobs.
+// With no faceplate (knobs-only mode) the device itself shows.
+type FpPart = "body" | "accent" | "side" | "bezel" | "logo";
+
+export interface TopViewInteraction {
+  selKnob: Slot | null;
+  selFp: FpPart | null;                         // highlight on the faceplate or the bezel
+  selGroup: { g: "L" | "R"; part: "body" | "cap" } | null;
+  groupVal: (g: "L" | "R", part: "body" | "cap") => string | null;   // null = mixed
+  onKnob: (s: Slot) => void;
+  onFaceplate: () => void;
+  onBezel: () => void;
+  onLogo: () => void;
+  onGroup: (g: "L" | "R", part: "body" | "cap") => void;
+  hover: { slot?: Slot; fp?: FpPart } | null;           // what the mouse is over (2D or 3D)
+  onHover: (h: { slot?: Slot; fp?: FpPart } | null) => void;
+}
+
+const ORANGE = "#FF5A1F";
+
+/** Bounding box of an "M x y L x y ... Z" path. */
+function bbox(d: string) {
+  const n = (d.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  const xs = n.filter((_, i) => i % 2 === 0), ys = n.filter((_, i) => i % 2 === 1);
+  const x = Math.min(...xs), y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+}
+const BEZEL_BOX = bbox(FM1_TOP.bezelOuter);
+// Badge bezel: the same ring plus a strip below the screen for the firmware name (same numbers as GLB v0.6).
+const BADGE_EXTRA = 80;
+const rrect = (x: number, y: number, w: number, h: number, r: number) =>
+  `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
+const BADGE_OUTER = rrect(BEZEL_BOX.x, BEZEL_BOX.y, BEZEL_BOX.w, BEZEL_BOX.h + BADGE_EXTRA, 46);
+// logo placeholder plate on the strip (267 x 82 px, centered in the strip), accent or black/white
+const LOGO = { x: BEZEL_BOX.x + BEZEL_BOX.w / 2 - 133.5, y: 549, w: 267, h: 82 };
+
+/** Four corner marks around a box (a "this is selected" hint), near-white, no outline. */
+function Brackets({ x, y, w, h, pad, len, soft }: { x: number; y: number; w: number; h: number; pad: number; len: number; soft?: boolean }) {
+  const x0 = x - pad, y0 = y - pad, x1 = x + w + pad, y1 = y + h + pad;
+  const d = `M${x0} ${y0 + len}V${y0}H${x0 + len}M${x1 - len} ${y0}H${x1}V${y0 + len}M${x1} ${y1 - len}V${y1}H${x1 - len}M${x0 + len} ${y1}H${x0}V${y1 - len}`;
+  // a thin dark halo under the light stroke keeps the marks readable on light and dark faceplates
+  return (
+    <g fill="none" strokeLinecap="square" pointerEvents="none" opacity={soft ? 0.75 : 1}>
+      <path d={d} stroke="#0D0D0C" strokeOpacity=".7" strokeWidth={soft ? 12 : 16} />
+      <path d={d} stroke="#F8F6F0" strokeWidth={soft ? 5 : 8} />
+    </g>
+  );
+}
+const circle = (cx: number, cy: number, r: number) =>
+  `M${cx - r} ${cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
+const lum = (h: string) => {
+  const n = parseInt(h.slice(1), 16);
+  return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+};
+
+export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full" }: {
+  build: Fm1Build;
+  hex: (id: string) => string;
+  factory: { body: string; keys: string };
+  ix?: TopViewInteraction;
+  className?: string;
+}): ReactNode {
+  const hatch = useId();
+  const { w, h, outline, keys, bezelOuter, screen, holes } = FM1_TOP;
+  const plate = build.mode === "case";
+  const slots = Object.keys(holes) as Slot[];
+  const pad = 40;
+  const hoverable = ix ? "cursor-pointer" : "";
+
+  const badge = plate && build.badge !== null;
+  const outerBezel = badge ? BADGE_OUTER : bezelOuter;
+  const bezelBox = badge ? { ...BEZEL_BOX, h: BEZEL_BOX.h + BADGE_EXTRA } : BEZEL_BOX;
+  const plateD = [outline, ...slots.map((s) => circle(holes[s].cx, holes[s].cy, holes[s].r)), ...keys, outerBezel].join("");
+  const bezelD = outerBezel + screen;
+  const bezelColor = hex(build.bezel ?? build.accent);
+
+  return (
+    <svg viewBox={`${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}`} className={className} role="img" aria-label="FM1 top view">
+      <defs>
+        <pattern id={hatch} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="7" height="14" fill="#bbb" /><rect x="7" width="7" height="14" fill="#555" />
+        </pattern>
+      </defs>
+      <rect x={-pad} y={-pad} width={w + 2 * pad} height={h + 2 * pad} fill="#0D0D0C" />
+
+      <path d={outline} fill={factory.body} />
+      {keys.map((d, i) => <path key={i} d={d} fill={factory.keys} />)}
+      <path d={screen} fill="#050505" />
+
+      {plate && (
+        <>
+          <path d={plateD} fillRule="evenodd" fill={hex(build.body)} stroke="#000" strokeOpacity=".3" strokeWidth="6"
+            className={hoverable} onClick={ix?.onFaceplate}
+            onPointerEnter={ix ? () => ix.onHover({ fp: "body" }) : undefined}
+            onPointerLeave={ix ? () => ix.onHover(null) : undefined}
+            style={ix?.hover?.fp && ix.hover.fp !== "bezel" && ix.hover.fp !== "logo" ? { filter: "brightness(1.18)" } : undefined} />
+          <path d={outline} fill="none" stroke={hex(build.side ?? build.body)} strokeWidth="10" strokeLinejoin="round" pointerEvents="none" />
+          <path d={bezelD} fillRule="evenodd" fill={bezelColor} className={hoverable} onClick={ix?.onBezel}
+            onPointerEnter={ix ? () => ix.onHover({ fp: "bezel" }) : undefined}
+            onPointerLeave={ix ? () => ix.onHover(null) : undefined}
+            style={ix?.hover?.fp === "bezel" ? { filter: "brightness(1.3)" } : undefined} />
+          {badge && (
+            <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} rx="8" fill={build.logo ? hex(build.logo) : logoColor(hex(build.accent), bezelColor)}
+              className={hoverable} onClick={ix?.onLogo}
+              onPointerEnter={ix ? () => ix.onHover({ fp: "logo" }) : undefined}
+              onPointerLeave={ix ? () => ix.onHover(null) : undefined} />
+          )}
+          {ix?.hover?.fp === "bezel" && ix.selFp !== "bezel" && <Brackets x={bezelBox.x} y={bezelBox.y} w={bezelBox.w} h={bezelBox.h} pad={30} len={60} soft />}
+          {ix?.hover?.fp && ix.hover.fp !== "bezel" && ix.hover.fp !== "logo" && <Brackets x={0} y={0} w={w} h={h} pad={46} len={90} soft />}
+          {badge && ix?.hover?.fp === "logo" && ix.selFp !== "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={16} len={30} soft />}
+          {badge && ix?.selFp === "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={10} len={34} />}
+          {/* selection hint: four corner brackets on the shape's bounding box, no outline */}
+          {ix && (ix.selFp === "body" || ix.selFp === "side" || ix.selFp === "accent") && (
+            <Brackets x={0} y={0} w={w} h={h} pad={26} len={110} />
+          )}
+          {ix?.selFp === "bezel" && <Brackets x={bezelBox.x} y={bezelBox.y} w={bezelBox.w} h={bezelBox.h} pad={16} len={70} />}
+        </>
+      )}
+
+      {ix && (["L", "R"] as const).map((g) => {
+        const hs = GROUPS[g].map((s) => holes[s]);
+        const x0 = Math.min(...hs.map((q) => q.cx - q.r)) - 30, x1 = Math.max(...hs.map((q) => q.cx + q.r)) + 30;
+        const y0 = Math.min(...hs.map((q) => q.cy - q.r)) - 44, y1 = Math.max(...hs.map((q) => q.cy + q.r)) + 30;
+        return (
+          <g key={g}>
+            <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} rx="16" fill="none" stroke="#9aa0a6" strokeWidth="4" strokeDasharray="16 12" pointerEvents="none" />
+            {(["body", "cap"] as const).map((part, i) => {
+              const v = ix.groupVal(g, part);
+              const on = ix.selGroup?.g === g && ix.selGroup.part === part;
+              const cx = x0 + 52 + i * 62;
+              return (
+                <g key={part} className="cursor-pointer" onClick={() => ix.onGroup(g, part)}>
+                  <circle cx={cx} cy={y0} r="26" fill={v ? hex(v) : `url(#${hatch})`} stroke={on ? ORANGE : "#0D0D0C"} strokeWidth={on ? 8 : 5} />
+                  {part === "cap" && <circle cx={cx} cy={y0} r="9" fill="#0D0D0C" />}
+                </g>
+              );
+            })}
+          </g>
+        );
+      })}
+
+      {slots.map((s) => {
+        const { cx, cy, r } = holes[s];
+        const k = build.knobs[s];
+        const ink = lum(hex(k.cap)) > 0.55 ? "#0D0D0C" : "#EEECE6";
+        return (
+          <g key={s} className={hoverable} onClick={ix ? () => ix.onKnob(s) : undefined}
+            onPointerEnter={ix ? () => ix.onHover({ slot: s }) : undefined}
+            onPointerLeave={ix ? () => ix.onHover(null) : undefined}
+            style={ix?.hover?.slot === s ? { filter: "brightness(1.25)" } : undefined}>
+            {plate && !ix && <rect x={cx - r * 0.55} y={cy + r + 12} width={r * 1.1} height="9" fill={hex(build.accent)} />}
+            <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} stroke="#0D0D0C" strokeWidth="6" />
+            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} stroke="#0D0D0C" strokeWidth="3" />
+            {ix?.hover?.slot === s && ix.selKnob !== s && <Brackets x={cx - r * 0.9} y={cy - r * 0.9} w={r * 1.8} h={r * 1.8} pad={24} len={30} soft />}
+            {ix?.selKnob === s && <Brackets x={cx - r * 0.9} y={cy - r * 0.9} w={r * 1.8} h={r * 1.8} pad={12} len={34} />}
+            {ix && (
+              <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontSize="38" fontFamily="'Martian Mono', monospace" fill={ink} pointerEvents="none">
+                {SLOT_LABEL[s]}
+              </text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}

@@ -4,9 +4,7 @@ export function ColorLegend() {
   const colors = colorsStore.getColors().filter((c) => c.available);
   return (
     <div className="bg-surface-card border border-border rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-text-secondary mb-3 uppercase tracking-wider">
-        Color Legend
-      </h3>
+      <h3 className="ks text-2xl text-text-primary mb-3">AVAILABLE COLORS</h3>
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
         {colors.map((color) => (
           <div key={color.id} className="flex items-center gap-1.5">
