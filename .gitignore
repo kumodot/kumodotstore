@@ -28,3 +28,4 @@ push-products.bat
 *.njsproj
 *.sln
 *.sw?
+kustomizer-fm1-dev.bat

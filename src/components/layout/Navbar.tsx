@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Scramble } from "@/components/ui/Scramble.tsx";
+import { JoinListButton } from "@/components/ui/JoinListButton.tsx";
 import { SITE } from "@/config/site.ts";
 import { STORE_MODE } from "@/data/storeMode.ts";
 import { useCart } from "@/features/checkout/useCart.ts";
@@ -23,15 +25,12 @@ export function Navbar() {
 
   return (
     <>
-      <nav className="border-b border-border bg-surface/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+      <nav className="border-b border-border bg-surface/85 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center justify-between">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <img src={SITE.logoIconUrl} alt="kumodot logo" className="h-7 w-7 object-contain" />
-            <span className="font-bold text-text-primary tracking-tight leading-none">
-              kumodot<span className="text-accent">store</span>
-            </span>
+          <Link to="/" className="flex items-center shrink-0" aria-label="kumodot store">
+            <img src="/brand/kumodot-store_on-dark.svg" alt="KUMODOT STORE" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop nav */}
@@ -40,24 +39,25 @@ export function Navbar() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`text-sm font-medium transition-colors ${
+                className={`font-mono text-xs uppercase tracking-[.06em] transition-colors ${
                   location.pathname === item.path ||
                   (item.path !== "/" && location.pathname.startsWith(item.path))
                     ? "text-accent"
                     : "text-text-secondary hover:text-text-primary"
                 }`}
               >
-                {item.label}
+                <Scramble text={item.label} />
               </Link>
             ))}
             <a
               href={SITE.etsyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
+              className="font-mono text-xs uppercase tracking-[.06em] text-text-secondary hover:text-text-primary transition-colors"
             >
-              Etsy Shop ↗
+              <Scramble text="Etsy Shop ↗" />
             </a>
+            <JoinListButton />
 
             {/* Cart button */}
             {STORE_MODE.cartEnabled && (
@@ -135,7 +135,7 @@ export function Navbar() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`block py-2 text-sm font-medium transition-colors ${
+                className={`block py-2 font-mono text-xs uppercase tracking-[.06em] transition-colors ${
                   location.pathname === item.path ||
                   (item.path !== "/" && location.pathname.startsWith(item.path))
                     ? "text-accent"
@@ -143,17 +143,18 @@ export function Navbar() {
                 }`}
                 onClick={() => setMobileOpen(false)}
               >
-                {item.label}
+                <Scramble text={item.label} />
               </Link>
             ))}
             <a
               href={SITE.etsyUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block py-2 text-sm font-medium text-text-secondary hover:text-text-primary"
+              className="block py-2 font-mono text-xs uppercase tracking-[.06em] text-text-secondary hover:text-text-primary"
             >
               Etsy Shop ↗
             </a>
+            <JoinListButton className="w-full mt-2" />
           </div>
         )}
       </nav>

@@ -23,7 +23,7 @@ export function CodeInput({ onApply }: CodeInputProps) {
         htmlFor="custom-code"
         className="block text-sm font-medium text-text-secondary mb-1"
       >
-        Or paste a code
+        Theme Code
       </label>
       <div className="flex gap-2">
         <input

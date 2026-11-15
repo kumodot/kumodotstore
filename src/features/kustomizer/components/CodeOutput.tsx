@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { STORE_MODE } from "@/data/storeMode.ts";
+import { OrderCopiedModal } from "@/components/ui/OrderCopiedModal.tsx";
 
 interface CodeOutputProps {
   code: string;
@@ -12,6 +13,8 @@ export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeO
   const cartDisabled = !STORE_MODE.cartEnabled;
   const [copied, setCopied] = useState(false);
   const [added, setAdded] = useState(false);
+  const [thanks, setThanks] = useState(false);
+  const [copyOk, setCopyOk] = useState(true);
 
   const handleAddToCart = () => {
     onAddToCart?.();
@@ -24,27 +27,23 @@ export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeO
 
   const handleCopy = async () => {
     const multiline = lines.map((l) => l + "/").join("\n");
+    let ok = false;
     try {
       await navigator.clipboard.writeText(multiline);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      ok = true;
     } catch {
       // Fallback: single-line with /
-      try {
-        await navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch {
-        alert("Failed to copy. Please copy manually.");
-      }
+      try { await navigator.clipboard.writeText(code); ok = true; } catch { /* blocked: the dialog shows the code */ }
     }
+    setCopied(ok);
+    if (ok) setTimeout(() => setCopied(false), 2000);
+    setCopyOk(ok);
+    setThanks(true);   // always open the dialog: it also shows the code for a manual copy
   };
 
   return (
     <div className="bg-surface-card border border-border rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-text-secondary mb-2 uppercase tracking-wider">
-        Order Code
-      </h2>
+      <h2 className="ks text-2xl text-text-primary mb-2">ORDER CODE</h2>
       <div className="flex flex-col sm:flex-row gap-2">
         <code className="flex-1 font-mono text-base text-accent bg-surface p-3 rounded-lg
                          border border-border leading-relaxed">
@@ -89,6 +88,7 @@ export function CodeOutput({ code, onExportImage, onAddToCart, editMode }: CodeO
           )}
         </div>
       </div>
+      {thanks && <OrderCopiedModal code={lines.join("/\n")} copied={copyOk} onSaveImage={onExportImage} onClose={() => setThanks(false)} />}
     </div>
   );
 }

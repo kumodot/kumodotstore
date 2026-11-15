@@ -1,3 +1,5 @@
+import { Scramble } from "./Scramble.tsx";
+
 interface CategoryFilterProps {
   categories: string[];
   active: Set<string>;
@@ -19,14 +21,14 @@ export function CategoryFilter({ categories, active, onToggle, onClear }: Catego
           <button
             key={cat}
             onClick={() => onToggle(cat)}
-            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all
-                        duration-150 cursor-pointer tracking-wide
+            className={`px-3 min-h-9 font-mono uppercase text-[11px] border transition-colors
+                        duration-150 cursor-pointer tracking-[.06em]
               ${isActive
                 ? "bg-accent text-[#0f0f0f] border-accent"
                 : "bg-transparent text-text-secondary border-border hover:border-text-muted hover:text-text-primary"
               }`}
           >
-            {cat}
+            <Scramble text={cat} />
           </button>
         );
       })}

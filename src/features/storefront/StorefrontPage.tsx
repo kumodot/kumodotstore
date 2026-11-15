@@ -5,10 +5,11 @@ import { SITE } from "@/config/site.ts";
 import { STORE_MODE } from "@/data/storeMode.ts";
 import { Carousel } from "@/components/ui/Carousel.tsx";
 import { CategoryFilter } from "@/components/ui/CategoryFilter.tsx";
+import { NotifyModal } from "@/components/ui/NotifyModal.tsx";
+import { GlitchTitle } from "@/components/ui/GlitchTitle.tsx";
+import { JoinListButton } from "@/components/ui/JoinListButton.tsx";
 import { cartStore } from "@/data/cartStore.ts";
 import type { Product, ProductPromotion } from "@/types/index.ts";
-
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec";
 
 const PROMO_COLORS: Record<string, string> = {
   new:     "bg-green-500 text-white",
@@ -30,94 +31,6 @@ function getBadges(product: Product): ProductPromotion[] {
   if (product.promotions && product.promotions.length > 0) return product.promotions;
   if (product.promotion) return [product.promotion];
   return [];
-}
-
-function NotifyModal({ product, type, onClose }: {
-  product: Product;
-  type: "restock" | "launch";
-  onClose: () => void;
-}) {
-  const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
-
-  const submit = async () => {
-    if (!email.trim()) return;
-    setState("sending");
-    try {
-      fetch(BACKEND_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          secret: import.meta.env.VITE_BACKEND_SECRET,
-          action: "waitlist",
-          waitlistType: type,
-          productId: product.id,
-          productName: product.name,
-          email: email.trim(),
-        }),
-      });
-      setState("ok");
-      setTimeout(onClose, 2000);
-    } catch {
-      setState("error");
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-surface-card border border-border rounded-2xl w-full max-w-sm p-6 shadow-2xl">
-        <h3 className="font-semibold text-text-primary mb-1">
-          {type === "launch" ? "Notify me at launch" : "Notify me when back"}
-        </h3>
-        <p className="text-sm text-text-muted mb-4">
-          {product.name} — we'll email you when it's available.
-        </p>
-
-        {state === "ok" ? (
-          <p className="text-sm text-green-400 text-center py-2">✓ You're on the list!</p>
-        ) : (
-          <>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submit()}
-              className="w-full px-3 py-2 rounded-lg bg-surface border border-border
-                         text-text-primary text-sm placeholder:text-text-muted
-                         focus:outline-none focus:border-accent mb-3"
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="flex-1 py-2 text-sm rounded-lg border border-border
-                           text-text-muted hover:bg-surface-hover transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submit}
-                disabled={state === "sending" || !email.trim()}
-                className="flex-1 py-2 text-sm rounded-lg bg-accent text-[#0f0f0f]
-                           font-semibold hover:bg-accent-hover transition-colors cursor-pointer
-                           disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {state === "sending" ? "Sending..." : "Notify me"}
-              </button>
-            </div>
-            {state === "error" && (
-              <p className="text-xs text-red-400 mt-2 text-center">Something went wrong. Try again.</p>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  );
 }
 
 /** Price display — masked while STORE_MODE.showPrices is off. */
@@ -144,9 +57,8 @@ function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <div className="relative bg-surface-card border border-border rounded-xl overflow-hidden
-                    hover:border-border-light transition-all duration-200 hover:-translate-y-0.5
-                    hover:shadow-lg hover:shadow-black/30 flex flex-col group">
+    <div className="relative bg-surface-card/90 border border-border overflow-hidden
+                    hover:border-accent transition-colors duration-[450ms] flex flex-col group">
 
       {/* Promo badges — stacked top left */}
       {badges.length > 0 && (
@@ -154,7 +66,7 @@ function ProductCard({ product }: { product: Product }) {
           {badges.map((b, i) => (
             <span
               key={i}
-              className={`px-2.5 py-1 text-xs font-bold rounded-full
+              className={`px-2 py-1 font-mono text-[10px] uppercase tracking-wider font-medium
                 ${PROMO_COLORS[b.variant] ?? "bg-surface-elevated text-text-primary"}`}
             >
               {b.label}
@@ -182,7 +94,7 @@ function ProductCard({ product }: { product: Product }) {
             {product.categories.map((cat) => (
               <span
                 key={cat}
-                className="px-2 py-0.5 rounded-full text-[10px] font-semibold
+                className="px-2 py-0.5 font-mono uppercase text-[10px]
                            bg-surface-elevated border border-border text-text-muted tracking-wide"
               >
                 {cat}
@@ -191,7 +103,7 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
 
-        <h3 className="font-semibold text-text-primary mb-1 leading-tight">{product.name}</h3>
+        <GlitchTitle as="h3" className="ks text-2xl text-text-primary mb-1 block" text={product.name.toUpperCase()} auto={false} />
         <p className="text-sm text-text-secondary mb-4 flex-1 leading-relaxed">
           {product.shortDescription}
         </p>
@@ -199,15 +111,15 @@ function ProductCard({ product }: { product: Product }) {
         <div className="flex items-end justify-between gap-2 mt-auto">
           <div>
             {isSoon ? (
-              <span className="text-xl font-bold text-text-muted tracking-widest">???</span>
+              <span className="font-mono text-lg font-medium text-text-muted tracking-widest">???</span>
             ) : isOutOfStock ? (
               <div>
-                <Price amount={product.price} className="text-xl font-bold text-text-muted line-through" />
+                <Price amount={product.price} className="font-mono text-lg font-medium text-text-muted line-through" />
                 <p className="text-xs text-red-400 mt-0.5 font-medium">Out of stock</p>
               </div>
             ) : product.price > 0 ? (
               <>
-                <Price amount={product.price} className="text-xl font-bold text-text-primary" />
+                <Price amount={product.price} className="font-mono text-lg font-medium text-text-primary" />
                 <p className="text-xs text-text-muted mt-0.5">
                   {STORE_MODE.showPrices
                     ? "Prices in CAD. Final price at checkout."
@@ -223,9 +135,9 @@ function ProductCard({ product }: { product: Product }) {
             {(isSoon || isOutOfStock) ? (
               <button
                 onClick={() => setNotifyOpen(true)}
-                className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
-                           text-text-secondary rounded-lg hover:bg-surface-hover
-                           hover:text-text-primary transition-colors whitespace-nowrap cursor-pointer"
+                className="px-3 min-h-10 font-mono text-xs uppercase tracking-[.06em] border border-border-light
+                           text-text-primary hover:border-accent hover:text-accent
+                           transition-colors whitespace-nowrap cursor-pointer"
               >
                 Notify me
               </button>
@@ -234,9 +146,9 @@ function ProductCard({ product }: { product: Product }) {
                 {product.kustomizerModelId && (
                   <Link
                     to={`/kustomize/${product.kustomizerModelId}?product=${product.id}`}
-                    className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
-                               text-text-secondary rounded-lg hover:bg-surface-hover
-                               hover:text-text-primary transition-colors whitespace-nowrap"
+                    className="px-3 min-h-10 inline-flex items-center font-mono text-xs uppercase tracking-[.06em] border border-border-light
+                               text-text-primary hover:border-accent hover:text-accent
+                               transition-colors whitespace-nowrap"
                   >
                     Customize
                   </Link>
@@ -244,9 +156,9 @@ function ProductCard({ product }: { product: Product }) {
                 {product.variationConfigId && (
                   <Link
                     to={`/configure/${product.variationConfigId}?product=${product.id}`}
-                    className="px-3 py-1.5 text-sm bg-surface-elevated border border-border
-                               text-text-secondary rounded-lg hover:bg-surface-hover
-                               hover:text-text-primary transition-colors whitespace-nowrap"
+                    className="px-3 min-h-10 inline-flex items-center font-mono text-xs uppercase tracking-[.06em] border border-border-light
+                               text-text-primary hover:border-accent hover:text-accent
+                               transition-colors whitespace-nowrap"
                   >
                     Customize
                   </Link>
@@ -257,8 +169,8 @@ function ProductCard({ product }: { product: Product }) {
                     href={product.etsyUrl ?? SITE.etsyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-3 py-1.5 text-sm bg-accent text-[#0f0f0f] font-semibold rounded-lg
-                               hover:bg-accent-hover transition-colors whitespace-nowrap"
+                    className="btn-brand px-3 min-h-10 inline-flex items-center bg-text-primary text-[#0D0D0C]
+                               font-mono text-xs font-medium uppercase tracking-[.06em] whitespace-nowrap hover:text-[#0D0D0C]"
                   >
                     Buy on Etsy ↗
                   </a>
@@ -286,7 +198,8 @@ function ProductCard({ product }: { product: Product }) {
 
       {notifyOpen && (
         <NotifyModal
-          product={product}
+          productId={product.id}
+          productName={product.name}
           type={isSoon ? "launch" : "restock"}
           onClose={() => setNotifyOpen(false)}
         />
@@ -330,11 +243,13 @@ export function StorefrontPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4">
-      <div className="py-3 mb-8 border-b border-border">
-        <p className="text-xs text-text-muted tracking-widest uppercase text-center">
-          {SITE.tagline}
-        </p>
+    <div className="max-w-7xl mx-auto px-4">
+      <div className="pt-10 pb-8 mb-8 border-b border-border flex flex-wrap items-end justify-between gap-6">
+        <div className="min-w-0 max-w-2xl">
+          <p className="mono mb-3">kumodot store</p>
+          <GlitchTitle as="h1" className="ks text-4xl sm:text-6xl text-text-primary" text={SITE.tagline.toUpperCase()} />
+        </div>
+        <JoinListButton className="min-h-12 px-6" />
       </div>
 
       <section className="pb-12">
