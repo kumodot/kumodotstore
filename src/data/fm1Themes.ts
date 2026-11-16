@@ -5,7 +5,7 @@
 export interface Fm1ThemeData { id: string; name: string; code: string }
 
 export const FM1_THEMES: Fm1ThemeData[] = [
-  { id: "classic-theme", name: "Classic", code: "FM1v2|F=LG,BK,-,=,-,-|L=CSORWH,CSMGWH,CSMGWH,CSMGWH|R=CSBLWH,CSGRWH,CSYEWH,CSRDWH|AB" },
-  { id: "sloop-theme", name: "Theme 2", code: "FM1v2|F=DG,GR,-,=,-,-|L=GLGRBK,GLBKGR,GLBKGR,GLBKGR|R=GLGRBK,GLGRBK,GLGRBK,GLGRBK|OV" },
-  { id: "jiant-theme", name: "Theme 3", code: "FM1v2|F=BK,YE,-,=,-,-|L=GSYEBK,GSWHBK,GSWHBK,GSWHBK|R=GSYEBK,GSYEBK,GSYEBK,GSYEBK|MN" },
+  { id: "classic-theme", name: "Classic", code: "FM1v2|F=LG,DG,-,DG,-,-|L=CSPUWH,CSMGWH,CSMGWH,CSMGWH|R=CSBLWH,CSGRWH,CSYEWH,CSRDWH|4P" },
+  { id: "sloop-theme", name: "SHRUB", code: "FM1v2|F=DG,GR,DG,=,SH,-|L=GSGRBK,GLBKGR,GLBKGR,GLBKGR|R=GLGRBK,GLGRBK,GLGRBK,GLGRBK|FQ" },
+  { id: "jiant-theme", name: "BAUD GIRL", code: "FM1v2|F=DG,PU,PU,DG,BG,PU|L=CSPURD,CSPUWH,CSPUWH,CSPUWH|R=CSPUBL,CSPUGR,CSPUYE,CSPUOR|KQ" },
 ];

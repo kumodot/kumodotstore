@@ -83,9 +83,15 @@ export class Fm1Scene {
     this.scene.background = new THREE.Color("#1f2125");
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(0.1, 0.4, 0.2);
+    // soft environment for fill, one strong key light from above-left so top faces are clearly brighter than the
+    // front ones (the case had almost no volume when the environment did all the lighting), a weak rim from the right
+    this.scene.environmentIntensity = 0.5;
+    const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+    sun.position.set(-0.12, 0.5, 0.1);
     this.scene.add(sun);
+    const rim = new THREE.DirectionalLight(0xdfe8ff, 0.5);
+    rim.position.set(0.3, 0.15, 0.25);
+    this.scene.add(rim);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -116,7 +122,7 @@ export class Fm1Scene {
     loop();
   }
 
-  async load(url: string): Promise<SceneLayout> {
+  async load(url: string, overrideUrl?: string): Promise<SceneLayout> {
     const gltf = await new GLTFLoader().loadAsync(url);
     gltf.scene.traverse((o) => {
       if (!(o as THREE.Mesh).isMesh) return;
@@ -127,6 +133,7 @@ export class Fm1Scene {
       this.mats[mat.name] = mat;
     });
     this.scene.add(gltf.scene);
+    if (overrideUrl) await this.mergeOverrides(overrideUrl, gltf.scene);
     // thin outlines for the parts that turn into a ghost in knobs-only mode
     for (const m of this.meshes) {
       if (!["fm1_device_body", "fm1_keys", "fm1_screen"].includes(m.name)) continue;
@@ -156,6 +163,39 @@ export class Fm1Scene {
     return this.layout;
   }
 
+  /** Optional test file: parts with the name of a base part replace it (the base material stays, so color still works),
+   *  parts with a new name are added as they are. Lets one try a few new parts without exporting the whole device.
+   *  A missing or broken file is ignored. */
+  private async mergeOverrides(url: string, root: THREE.Object3D) {
+    let ov;
+    try { ov = await new GLTFLoader().loadAsync(url); } catch { return; }
+    ov.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(ov.scene);
+    const unit = box.getSize(new THREE.Vector3()).length() > 1 ? 0.01 : 1;   // exported in cm instead of meters
+    const incoming: THREE.Mesh[] = [];
+    ov.scene.traverse((o) => { if ((o as THREE.Mesh).isMesh) incoming.push(o as THREE.Mesh); });
+    for (const m of incoming) {
+      const geo = m.geometry.clone();
+      geo.applyMatrix4(m.matrixWorld);                 // bake the node transform: the part keeps its place
+      if (unit !== 1) geo.scale(unit, unit, unit);
+      geo.computeBoundingBox();
+      const base = this.meshes.find((x) => x.name === m.name);
+      if (base) {
+        base.geometry.dispose();
+        base.geometry = geo;
+        base.position.set(0, 0, 0); base.rotation.set(0, 0, 0); base.scale.set(1, 1, 1);
+      } else {
+        const mat = (m.material as THREE.MeshStandardMaterial).clone();
+        mat.roughness = 0.5;
+        const nm = new THREE.Mesh(geo, mat);
+        nm.name = m.name;
+        root.add(nm);
+        this.meshes.push(nm);
+        this.mats[mat.name || `mat_${m.name}`] = mat;
+      }
+    }
+  }
+
   apply(b: Fm1Build, f: Factory) {
     this.applied = { b, f };
     const set = (n: string, hex: string) => {
@@ -170,8 +210,10 @@ export class Fm1Scene {
     set("mat_faceplate_body", hex(b.body));
     set("mat_faceplate_side", hex(b.side ?? b.body));
     set("mat_faceplate_accent", hex(b.accent));
+    set("mat_faceplate_accent_labels", hex(b.accent));   // the label shapes of the studio model follow the accent too
     set("mat_bezel_simple", hex(b.bezel ?? b.accent));
     set("mat_bezel_ext", hex(b.bezel ?? b.accent));
+    set("mat_bezel_jiant", hex(b.bezel ?? b.accent));
     set("mat_bezel_logo", b.logo ? hex(b.logo) : logoColor(hex(b.accent), hex(b.bezel ?? b.accent)));   // chosen, else auto
     for (const s of SLOTS) {
       set(`mat_knob_${s}_body`, hex(b.knobs[s].body));
@@ -206,7 +248,7 @@ export class Fm1Scene {
       else if (n === "bezel_ext") vis = b.badge !== null && bezelType !== "jiant";
       else if (n === "bezel_jiant") vis = b.badge !== null && bezelType === "jiant";
       else if (n.startsWith("bezel_logo_")) vis = n === plateName;
-      if (!caseMode && (n.startsWith("faceplate_") || n.startsWith("bezel_"))) vis = false;
+      if (!caseMode && !n.startsWith("knob_") && !["fm1_device_body", "fm1_keys", "fm1_screen"].includes(n)) vis = false;
       const k = KNOB_RE.exec(n);
       if (k) {
         const kn = b.knobs[k[1] as Slot];
@@ -223,6 +265,10 @@ export class Fm1Scene {
   private applyLogo(b: Fm1Build, plateName: string | null, file: string | null) {
     const plate = plateName ? this.meshes.find((m) => m.name === plateName) : undefined;
     const mat = plate?.material as THREE.MeshStandardMaterial | undefined;
+    // a logo that is real geometry in the model (JIANT) is shown as it is; the SVG overlay is for the flat placeholder plates
+    const realGeometry = !!plate && (plate.geometry.index?.count ?? plate.geometry.attributes.position.count) / 3 > 40;
+    if (realGeometry && this.logoQuad) this.logoQuad.visible = false;
+    if (realGeometry && mat) { mat.visible = true; return; }
     if (!plate || !file || !this.applied) {
       if (this.logoQuad) this.logoQuad.visible = false;
       if (mat) mat.visible = true;   // BLANK or no logo yet: the plain colored plate
@@ -240,7 +286,8 @@ export class Fm1Scene {
       }
       const q = this.logoQuad;
       if (q.parent !== plate) plate.add(q);
-      q.scale.set(size.x, size.z, 1);
+      const sc = firmwareById(b.badge ?? "")?.scale ?? 1;
+      q.scale.set(size.x * sc, size.z * sc, 1);
       q.position.set(c.x, bb.max.y + 0.00006, c.z);
       const color = b.logo ? this.colorOf.hex(b.logo) : logoColor(this.colorOf.hex(b.accent), this.colorOf.hex(b.bezel ?? b.accent));
       const key = `${file}|${color}`;
@@ -280,7 +327,7 @@ export class Fm1Scene {
     let toT = HOME.target.clone();
     let toP = HOME.pos.clone();
     if (t === "faceplate") {
-      toP = new THREE.Vector3(0, 0.13, 0.12);
+      toP = new THREE.Vector3(0, 0.16, 0.2);   // a little above the home view, far enough to see the whole faceplate
     } else if (t) {
       const k = this.layout.knobs[t];
       toT = new THREE.Vector3(k.x, 0, k.z);
@@ -398,7 +445,7 @@ export class Fm1Scene {
       if (k) return { k: "knob", slot: k[1] as Slot, part: k[4] as "body" | "cap" };
       if (n === "faceplate_body") return { k: "fp", part: "body" };
       if (n === "faceplate_side") return { k: "fp", part: "side" };
-      if (n === "faceplate_accent") return { k: "fp", part: "accent" };
+      if (n === "faceplate_accent" || n === "faceplate_accent_labels") return { k: "fp", part: "accent" };
       if (n.startsWith("bezel_logo_")) return { k: "fp", part: "logo" };   // click the firmware logo to color it
       if (n.startsWith("bezel_")) return { k: "fp", part: "bezel" };
       return null;

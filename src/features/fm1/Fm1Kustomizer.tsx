@@ -7,6 +7,7 @@ import { OrderCopiedModal } from "@/components/ui/OrderCopiedModal.tsx";
 import { exportFm1Image } from "./fm1Image.ts";
 import { KnobRender } from "./KnobRender.tsx";
 import { firmwareById } from "@/data/firmwares.ts";
+import { FM1_FEATURES, FM1_PUBLIC_VIEW } from "@/data/fm1Features.ts";
 import { KnobStats } from "./KnobStats.tsx";
 import { RadialColorMenu } from "./RadialColorMenu.tsx";
 import { GlitchSwap } from "@/components/ui/GlitchSwap.tsx";
@@ -30,8 +31,25 @@ type Target =
   | { k: "group"; g: "L" | "R"; part: "body" | "cap" }
   | { k: "knob"; slot: Slot; part: "body" | "cap" };
 
-const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_preview_ALLVARIANTS_v0.6.glb`;
+const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_site_v0.7.glb`;
+// optional: a file with a few new or replaced parts, only used if it exists (see Fm1Scene.mergeOverrides)
+const GLB_OVERRIDES = `${import.meta.env.BASE_URL}models/FM1_Kz_overrides.glb`;
 const cloneBuild = (b: Fm1Build): Fm1Build => JSON.parse(JSON.stringify(b));
+
+type FpPartName = "body" | "accent" | "side" | "bezel" | "logo";
+/** A part that is turned off in FM1_FEATURES hands its clicks to the part that now drives it. */
+const effPart = (p: FpPartName): FpPartName => (!FM1_FEATURES.sides && p === "side" ? "body" : !FM1_FEATURES.badge && (p === "bezel" || p === "logo") ? "accent" : p);
+/** The materials a faceplate part controls (for the highlight and the hover glow). */
+const fpMats = (p: FpPartName, sideFollows: boolean) =>
+  p === "body" ? ["mat_faceplate_body", ...(sideFollows ? ["mat_faceplate_side"] : [])]
+    : p === "accent" ? (FM1_FEATURES.badge ? ["mat_faceplate_accent", "mat_faceplate_accent_labels"] : ["mat_faceplate_accent", "mat_faceplate_accent_labels", "mat_bezel_simple", "mat_bezel_ext"])
+    : p === "side" ? ["mat_faceplate_side"] : p === "logo" ? ["mat_bezel_logo"] : ["mat_bezel_simple", "mat_bezel_ext"];
+/** Features that are off are fixed in the build, so nothing hidden can reach the code. */
+const norm = (b: Fm1Build): Fm1Build => {
+  if (!FM1_FEATURES.sides) b.side = null;
+  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; b.bezel = null; }
+  return b;
+};
 
 export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const info = KUSTOMIZER_PRODUCTS.find((p) => p.kind === (mode === "case" ? "fm1-case" : "fm1-knobs"))!;
@@ -39,7 +57,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const colors = offeredColors("fm1-kz", allColors);   // what the tray offers (see src/data/colorAvailability.ts)
   const hex = (id: string) => allColors.find((c) => c.id === id)?.hex ?? "#888888";   // any color still draws, even if no longer offered
 
-  const start = (): Fm1Build => ({ ...cloneBuild(FIXED_THEMES[0].build), mode });
+  const start = (): Fm1Build => norm({ ...cloneBuild(FIXED_THEMES[0].build), mode });
   const [build, setBuild] = useState<Fm1Build>(start);
   const [factory, setFactory] = useState<FactoryId>("beige1");
   // knobs-only has no faceplate: start on the left knob group so a color click does something
@@ -53,6 +71,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [allDone, setAllDone] = useState(false);
   const [naming, setNaming] = useState(false);
+  const [flashSoon, setFlashSoon] = useState(0);   // counts the clicks on a turned-off part: each one restarts the flash of its SOON tag
   const [updating, setUpdating] = useState(false);
   const [peek, setPeek] = useState<string | null>(null);   // a shape button under the mouse: its stats are shown to compare
   const [origin, setOrigin] = useState<string | null>(null);   // the saved theme the buyer is editing, if any
@@ -76,9 +95,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     const s = new Fm1Scene(host.current!);
     scene.current = s;
     s.colorOf = { hex };
-    const fpNames = (part: "body" | "accent" | "side" | "bezel" | "logo") =>
-      part === "body" ? ["mat_faceplate_body", ...(buildRef.current.side === null ? ["mat_faceplate_side"] : [])]
-        : part === "accent" ? ["mat_faceplate_accent"] : part === "side" ? ["mat_faceplate_side"] : part === "logo" ? ["mat_bezel_logo"] : ["mat_bezel_simple", "mat_bezel_ext"];
+    const fpNames = (part: FpPartName) => fpMats(effPart(part), buildRef.current.side === null);
     s.onPick = (p: ScenePick | null) => {
       if (!p) return clearSel();
       if (p.k === "knob") pickKnob(p.slot, p.part);
@@ -90,7 +107,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       if (p.k === "knob") return setHover({ names: [`mat_knob_${p.slot}_${p.part}`], slot: p.slot, part: p.part });
       setHover({ names: fpNames(p.part), fp: p.part });
     };
-    s.load(GLB).then(() => { s.apply(buildRef.current, fac); }).catch(() => setMsg("Could not load the 3D model."));
+    s.load(GLB, GLB_OVERRIDES).then(() => { s.apply(buildRef.current, fac); }).catch(() => setMsg("Could not load the 3D model."));
     return () => { s.dispose(); scene.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -109,26 +126,22 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   // pulse the part being edited in the 3D view
   const hlNames = useMemo(() => {
     if (target.k === "fp") {
-      if (target.part === "body") return ["mat_faceplate_body", ...(build.side === null ? ["mat_faceplate_side"] : [])];
-      if (target.part === "accent") return ["mat_faceplate_accent"];
-      if (target.part === "side") return ["mat_faceplate_side"];
-      if (target.part === "logo") return ["mat_bezel_logo"];
-      return ["mat_bezel_simple", "mat_bezel_ext"];
+      return fpMats(effPart(target.part), build.side === null);
     }
     const slots = target.k === "group" ? GROUPS[target.g] : [target.slot];
     return slots.map((s) => `mat_knob_${s}_${target.part}`);
   }, [target, build.side]);
   // name of the part being customized, shown in a corner of the 3D view
-  const fpName = { body: "FACEPLATE", accent: "ACCENT COLOR", side: "SIDES", bezel: "BEZEL", logo: "FIRMWARE LOGO" };
+  const fpName: Record<FpPartName, string> = { body: "FACEPLATE", accent: FM1_FEATURES.badge ? "ACCENT COLOR" : "ACCENT + BEZEL", side: "SIDES", bezel: "BEZEL", logo: "FIRMWARE LOGO" };
   const targetLabel = useMemo(() => {
-    if (target.k === "fp") return fpName[target.part];
+    if (target.k === "fp") return fpName[effPart(target.part)];
     const which = target.part === "body" ? "BODY" : "CAP";
     if (target.k === "group") return `KNOBS ${GROUPS[target.g].map((s) => SLOT_NAME[s]).join(" ")} · ${target.part === "body" ? "BODIES" : "CAPS"}`;
     return `KNOB ${SLOT_NAME[target.slot]} · ${which}`;
   }, [target]);
   const partLabel = useMemo(() => {
     if (hover?.group) return `KNOBS ${GROUPS[hover.group.g].map((x) => SLOT_NAME[x]).join(" ")} · ${hover.group.part === "body" ? "BODIES" : "CAPS"}`;
-    if (hover?.fp) return fpName[hover.fp];
+    if (hover?.fp) return fpName[effPart(hover.fp)];
     if (hover?.slot) return `KNOB ${SLOT_NAME[hover.slot]}${hover.part ? ` · ${hover.part === "body" ? "BODY" : "CAP"}` : ""}`;
     return targetLabel;
   }, [targetLabel, hover]);
@@ -136,12 +149,14 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   useEffect(() => { scene.current?.highlight(hlNames); }, [hlNames]);
 
 
-  function pickFp(part: "body" | "accent" | "side" | "bezel" | "logo") { setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
+  function pickFp(raw: FpPartName) {
+    const part = effPart(raw);
+    if (raw === "side" && part !== raw) setFlashSoon((n) => n + 1); setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
   function pickFaceplate() { pickFp("body"); }
   function pickKnob(s: Slot, part: "body" | "cap" = "body") { setSelKnob(s); setTarget({ k: "knob", slot: s, part }); scene.current?.focus(s); }
   function clearSel() { setRadial(false); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); }
 
-  const edit = (fn: (b: Fm1Build) => void) => { const b = cloneBuild(build); fn(b); setBuild(b); setThemeId(""); };
+  const edit = (fn: (b: Fm1Build) => void) => { const b = cloneBuild(build); fn(b); norm(b); setBuild(b); setThemeId(""); };
   // paints the selected part (what `target` points at) with a color, on the build it is given
   function paint(b: Fm1Build, id: string) {
     if (target.k === "fp") {
@@ -161,7 +176,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     b.knobs[slot] = k;
   });
 
-  const loadBuild = (b: Fm1Build, id: string) => { setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild({ ...cloneBuild(b), mode }); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
+  const loadBuild = (b: Fm1Build, id: string) => { setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
   const applyTheme = (id: string) => {
     const t = FIXED_THEMES.find((x) => x.id === id);
     if (t) return loadBuild(t.build, id);
@@ -250,7 +265,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             ...(isDraft && !editingSaved ? [{ id: "__draft", name: "Not saved", build }] : []),
           ].map((t) => ({
             id: t.id, name: t.name, draft: t.id === "__draft" || t.id === editingSaved, removable: t.id !== "__draft" && t.id !== editingSaved && !FIXED_THEMES.some((f) => f.id === t.id),
-            thumb: <Fm1Thumb build={{ ...t.build, mode }} hex={hex} factory={fac} />,
+            thumb: <Fm1Thumb build={norm({ ...cloneBuild(t.build), mode })} hex={hex} factory={fac} />,
           }))}
           onRemove={(id) => { const list = saved.filter((x) => x.id !== id); setSaved(list); storeSaved(list); }}
           activeId={isDraft ? editingSaved ?? "__draft" : themeId || null}
@@ -269,6 +284,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
         <div className="sticky top-[73px] z-30 min-w-0 self-start bg-[#0d0d0c]/95 backdrop-blur pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:bg-transparent lg:backdrop-blur-none lg:top-[88px]">
           <div className="relative" data-keep-radial>
             <div ref={host} className="w-full aspect-[4/3] max-h-[32vh] lg:max-h-none rounded-xl overflow-hidden border border-border bg-[#1f2125]" />
+            <span className="pointer-events-none absolute right-2 top-2 mono text-[8px] leading-none tracking-wider text-white/45">LOW-POLY PREVIEW · NOT FINAL QUALITY</span>
             <div className="pointer-events-none absolute left-3 top-3 bg-black/60 px-2.5 py-1.5">
               <span className="ks block text-xl leading-none text-white">{partLabel}</span>
             </div>
@@ -353,7 +369,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           )}
 
           {/* bezel type: the basic ring, or the badge bezel with a strip for the firmware name */}
-          {mode === "case" && target.k === "fp" && (target.part === "bezel" || target.part === "logo") && (
+          {FM1_FEATURES.badge && mode === "case" && target.k === "fp" && (target.part === "bezel" || target.part === "logo") && (
             <section>
               <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-text-muted">
                 <span className="font-semibold tracking-wider text-text-primary">BEZEL TYPE:</span>
@@ -406,7 +422,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             <p className="text-[11px] text-text-muted mt-1">Only for your preview, it is not part of the order code.</p>
           </section>
 
-          <section className="bg-surface-card border border-border p-2" data-keep-radial>
+          <section className="bg-surface-card border border-border p-2 lg:w-4/5 lg:mr-auto" data-keep-radial>
             <Fm1TopView
               build={shown}
               hex={hex}
@@ -424,10 +440,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                   if (h.group) return setHover({ names: GROUPS[h.group.g].map((x) => `mat_knob_${x}_${h.group!.part}`), group: h.group });
                   if (h.slot) return setHover({ names: h.part ? [`mat_knob_${h.slot}_${h.part}`] : [`mat_knob_${h.slot}_body`, `mat_knob_${h.slot}_cap`], slot: h.slot, part: h.part });
                   const part = h.fp ?? "body";
-                  setHover({
-                    names: part === "logo" ? ["mat_bezel_logo"] : part === "bezel" ? ["mat_bezel_simple", "mat_bezel_ext"] : part === "accent" ? ["mat_faceplate_accent"] : ["mat_faceplate_body", ...(build.side === null ? ["mat_faceplate_side"] : [])],
-                    fp: part,
-                  });
+                  setHover({ names: fpMats(effPart(part), build.side === null), fp: part });
                 },
                 onFaceplate: () => { pickFaceplate(); openRadial(); },
                 onBezel: () => { pickFp("bezel"); openRadial(); },
@@ -437,6 +450,24 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             />
           </section>
 
+          {/* the two color parts of the case as buttons (the accent is small and easy to miss), plus what is coming */}
+          {mode === "case" && (
+            <div className="lg:w-4/5 lg:mr-auto flex flex-wrap items-center gap-2 text-xs" data-keep-radial>
+              {([["body", "Faceplate", shown.body], ["accent", FM1_FEATURES.badge ? "Accent" : "Accent + Bezel", shown.accent]] as const).map(([part, label, id]) => (
+                <button key={part} onClick={() => { pickFp(part); openRadial(); }}
+                  className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${target.k === "fp" && effPart(target.part) === part ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
+                  <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(id) }} />
+                  {label}
+                </button>
+              ))}
+              {!FM1_FEATURES.sides && (
+                <span key={flashSoon} className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2"
+                  style={flashSoon > 0 ? { animation: "soonFlash 1.4s steps(1, end) 1" } : undefined}>SIDES COLOR · SOON</span>
+              )}
+              {!FM1_FEATURES.badge && <span className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2">FIRMWARE BADGES · SOON</span>}
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -444,7 +475,15 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       {/* phone and tablet: after the controls */}
       <div className="lg:hidden">{codePanel}</div>
 
-      <p className="text-[11px] text-text-muted mt-3 text-center">FM1 Kustomizer v{FM1_VERSION}</p>
+      {import.meta.env.DEV && (
+        <p className="text-[11px] text-center mt-3">
+          <button className="mono text-accent underline cursor-pointer"
+            onClick={() => { try { localStorage.setItem("fm1_public", FM1_PUBLIC_VIEW ? "0" : "1"); } catch { /* no storage */ } location.reload(); }}>
+            STUDIO: {FM1_PUBLIC_VIEW ? "showing the PUBLIC view (click for all features)" : "all features ON (click to preview the public view)"}
+          </button>
+        </p>
+      )}
+      <p className="text-[11px] text-text-muted mt-3 text-center">FM1 Kustomizer v{FM1_VERSION} · build {typeof __BUILD__ !== "undefined" ? __BUILD__ : "restart server"}</p>
       {updating && editingSaved && (
         <ConfirmModal title="Update this theme?" text={`You changed "${saved.find((x) => x.id === editingSaved)?.name}". Update it, or keep it as it was and save your version as a new theme.`}
           yes="Save as new" no="Cancel" alt={{ label: "Update", onClick: () => { updateSaved(editingSaved); setUpdating(false); } }}

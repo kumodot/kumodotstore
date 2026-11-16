@@ -37,14 +37,21 @@ function bbox(d: string) {
 }
 const BEZEL_BOX = bbox(FM1_TOP.bezelOuter);
 // Badge bezel: the same ring plus a strip below the screen for the firmware name (same numbers as GLB v0.6).
-const BADGE_EXTRA = 80;
+const BADGE_EXTRA = 98;   // the extended bezel's strip runs down to the top line of the keyboard
 const rrect = (x: number, y: number, w: number, h: number, r: number) =>
   `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
-const BADGE_OUTER = rrect(BEZEL_BOX.x, BEZEL_BOX.y, BEZEL_BOX.w, BEZEL_BOX.h + BADGE_EXTRA, 46);
 // The logo area on the strip: from just under the screen hole down to the bezel edge, as wide as the hole.
 const SCREEN_BOX = bbox(FM1_TOP.screen);
 const LOGO_TOP = SCREEN_BOX.y + SCREEN_BOX.h + 4;
-const LOGO = { x: SCREEN_BOX.x, y: LOGO_TOP, w: SCREEN_BOX.w, h: BEZEL_BOX.y + BEZEL_BOX.h + BADGE_EXTRA - 14 - LOGO_TOP };
+/** The badge bezel and its logo area. `grow` stretches the strip down over the keys (JIANT's own bezel is taller). */
+const stripGeom = (grow: number) => {
+  const extra = BADGE_EXTRA + grow;
+  return {
+    extra,
+    outer: rrect(BEZEL_BOX.x, BEZEL_BOX.y, BEZEL_BOX.w, BEZEL_BOX.h + extra, 46),
+    logo: { x: SCREEN_BOX.x, y: LOGO_TOP, w: SCREEN_BOX.w, h: BEZEL_BOX.y + BEZEL_BOX.h + extra - 14 - LOGO_TOP },
+  };
+};
 
 /** Four corner marks around a box (a "this is selected" hint), near-white, no outline. */
 function Brackets({ x, y, w, h, pad, len, soft }: { x: number; y: number; w: number; h: number; pad: number; len: number; soft?: boolean }) {
@@ -81,13 +88,17 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
 
   const badge = plate && build.badge !== null;
   const fw = build.badge ? firmwareById(build.badge) : undefined;
+  const G = stripGeom(fw?.bezel === "jiant" ? 30 : 0);
   const showLogo = badge && !!fw?.logo;   // BLANK: nothing at all on the strip
   const logo = useLogo(badge ? fw?.logo ?? null : null);
   const maskId = useId();
-  const fit = logo ? fitLogo(logo, LOGO.x, LOGO.y, LOGO.w, LOGO.h) : null;
+  // the logo area, scaled around its center by the firmware's `scale` (the mask grows with it so nothing is cut)
+  const sc = fw?.scale ?? 1;
+  const LA = { x: G.logo.x + G.logo.w * (1 - sc) / 2, y: G.logo.y + G.logo.h * (1 - sc) / 2, w: G.logo.w * sc, h: G.logo.h * sc };
+  const fit = logo ? fitLogo(logo, LA.x, LA.y, LA.w, LA.h) : null;
   const logoFill = build.logo ? hex(build.logo) : logoColor(hex(build.accent), hex(build.bezel ?? build.accent));
-  const outerBezel = badge ? BADGE_OUTER : bezelOuter;
-  const bezelBox = badge ? { ...BEZEL_BOX, h: BEZEL_BOX.h + BADGE_EXTRA } : BEZEL_BOX;
+  const outerBezel = badge ? G.outer : bezelOuter;
+  const bezelBox = badge ? { ...BEZEL_BOX, h: BEZEL_BOX.h + G.extra } : BEZEL_BOX;
   const plateD = [outline, ...slots.map((s) => circle(holes[s].cx, holes[s].cy, holes[s].r)), ...keys, outerBezel].join("");
   const bezelD = outerBezel + screen;
   const bezelColor = hex(build.bezel ?? build.accent);
@@ -106,7 +117,7 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
       <path d={screen} fill="#050505" />
       {/* the big unused key area shows the name of the part being edited / hovered, like the label on the 3D view */}
       {ix?.label && (() => {
-        const b = bbox(keys[0]), fs = Math.min(120, (b.w - 140) / (ix.label.length * 0.66)), tw = Math.min(b.w - 40, ix.label.length * fs * 0.66 + 80);
+        const b = bbox(keys[0]), fs = Math.min(76, (b.w - 140) / (ix.label.length * 0.66)), tw = Math.min(b.w - 40, ix.label.length * fs * 0.66 + 80);
         return (
           <g pointerEvents="none">
             <rect x={b.x + b.w / 2 - tw / 2} y={b.y + b.h / 2 - fs * 0.85} width={tw} height={fs * 1.7} fill="#0D0D0C" fillOpacity=".8" />
@@ -132,13 +143,13 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
               {/* the firmware logo (its SVG tinted with the logo color); BLANK has none, only the clickable strip */}
               {fit && logo && (
                 <>
-                  <mask id={maskId} maskUnits="userSpaceOnUse" x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} style={{ maskType: "alpha" }}>
+                  <mask id={maskId} maskUnits="userSpaceOnUse" x={Math.min(G.logo.x, LA.x)} y={Math.min(G.logo.y, LA.y)} width={Math.max(G.logo.w, LA.w)} height={Math.max(G.logo.h, LA.h)} style={{ maskType: "alpha" }}>
                     <image href={`${import.meta.env.BASE_URL}logos/${fw!.logo}`} x={fit.x} y={fit.y} width={fit.w} height={fit.h} />
                   </mask>
-                  <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} fill={logoFill} mask={`url(#${maskId})`} pointerEvents="none" />
+                  <rect x={Math.min(G.logo.x, LA.x)} y={Math.min(G.logo.y, LA.y)} width={Math.max(G.logo.w, LA.w)} height={Math.max(G.logo.h, LA.h)} fill={logoFill} mask={`url(#${maskId})`} pointerEvents="none" />
                 </>
               )}
-              <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} rx="8" fill="transparent"
+              <rect x={G.logo.x} y={G.logo.y} width={G.logo.w} height={G.logo.h} rx="8" fill="transparent"
                 className={hoverable} onClick={ix?.onLogo}
                 onPointerEnter={ix ? () => ix.onHover({ fp: "logo" }) : undefined}
                 onPointerLeave={ix ? () => ix.onHover(null) : undefined} />
@@ -146,8 +157,8 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
           )}
           {ix?.hover?.fp === "bezel" && ix.selFp !== "bezel" && <Brackets x={bezelBox.x} y={bezelBox.y} w={bezelBox.w} h={bezelBox.h} pad={30} len={60} soft />}
           {ix?.hover?.fp && ix.hover.fp !== "bezel" && ix.hover.fp !== "logo" && <Brackets x={0} y={0} w={w} h={h} pad={46} len={90} soft />}
-          {showLogo && ix?.hover?.fp === "logo" && ix.selFp !== "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={16} len={30} soft />}
-          {showLogo && ix?.selFp === "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={10} len={34} />}
+          {showLogo && ix?.hover?.fp === "logo" && ix.selFp !== "logo" && <Brackets x={G.logo.x} y={G.logo.y} w={G.logo.w} h={G.logo.h} pad={16} len={30} soft />}
+          {showLogo && ix?.selFp === "logo" && <Brackets x={G.logo.x} y={G.logo.y} w={G.logo.w} h={G.logo.h} pad={10} len={34} />}
           {/* selection hint: four corner brackets on the shape's bounding box, no outline */}
           {ix && (ix.selFp === "body" || ix.selFp === "side" || ix.selFp === "accent") && (
             <Brackets x={0} y={0} w={w} h={h} pad={26} len={110} />

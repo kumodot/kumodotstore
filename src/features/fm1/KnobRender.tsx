@@ -31,6 +31,15 @@ const loadImg = (file: string) => {
   return p;
 };
 
+/** Multiplying by a very dark color kills all the shading (black x anything = black), so dark colors are lifted
+ *  to a floor: black stays clearly black but its volume, grooves and highlights stay visible. */
+const FLOOR = 56;
+function lifted(hex: string) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.max(v, FLOOR));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
 /** The render multiplied by a color, kept inside its own alpha. */
 function tinted(img: HTMLImageElement, color: string, W: number, H: number) {
   const c = document.createElement("canvas");
@@ -39,7 +48,7 @@ function tinted(img: HTMLImageElement, color: string, W: number, H: number) {
   const x = c.getContext("2d")!;
   x.drawImage(img, 0, 0, W, H);
   x.globalCompositeOperation = "multiply";
-  x.fillStyle = color;
+  x.fillStyle = lifted(color);
   x.fillRect(0, 0, W, H);
   x.globalCompositeOperation = "destination-in";
   x.drawImage(img, 0, 0, W, H);

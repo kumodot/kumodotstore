@@ -110,3 +110,10 @@ a[class*="bg-accent"]:hover { color: #0D0D0C; }
 .g-slice::before { clip-path: inset(0 0 55% 0); }
 .g-slice::after { clip-path: inset(45% 0 0 0); transform: translateX(.06em); color: var(--color-accent); }
 [data-glitch] .g-lo, [data-glitch] .g-hi, [data-glitch] .g-hollow, [data-glitch] .g-slice { display: inline-block; }
+
+
+/* a turned-off feature was clicked: its SOON tag flashes three times, hard to miss */
+@keyframes soonFlash {
+  0%, 8%, 24%, 41%, 58%, 75%, 91%, 100% { background: transparent; color: #8c8a85; border-color: #FF5A1F; }
+  16%, 50%, 83% { background: #FF5A1F; color: #0D0D0C; border-color: #FF5A1F; }
+}
