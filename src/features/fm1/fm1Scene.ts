@@ -225,7 +225,7 @@ export class Fm1Scene {
       const m = this.mats[n];
       if (!m) continue;
       m.transparent = !caseMode;
-      m.opacity = caseMode ? 1 : 0.13;
+      m.opacity = caseMode ? 1 : 0.32;   // knobs-only: the device is a translucent shell in the customer's device color
       m.depthWrite = caseMode;
       m.needsUpdate = true;
     }

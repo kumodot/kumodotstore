@@ -57,7 +57,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const colors = offeredColors("fm1-kz", allColors);   // what the tray offers (see src/data/colorAvailability.ts)
   const hex = (id: string) => allColors.find((c) => c.id === id)?.hex ?? "#888888";   // any color still draws, even if no longer offered
 
-  const start = (): Fm1Build => norm({ ...cloneBuild(FIXED_THEMES[0].build), mode });
+  const start = (): Fm1Build => ({ ...cloneBuild(FIXED_THEMES[0].build), mode });   // a fixed theme shows everything it has
   const [build, setBuild] = useState<Fm1Build>(start);
   const [factory, setFactory] = useState<FactoryId>("beige1");
   // knobs-only has no faceplate: start on the left knob group so a color click does something
@@ -156,7 +156,12 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   function pickKnob(s: Slot, part: "body" | "cap" = "body") { setSelKnob(s); setTarget({ k: "knob", slot: s, part }); scene.current?.focus(s); }
   function clearSel() { setRadial(false); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); }
 
-  const edit = (fn: (b: Fm1Build) => void) => { const b = cloneBuild(build); fn(b); norm(b); setBuild(b); setThemeId(""); };
+  const edit = (fn: (b: Fm1Build) => void) => {
+    const b = cloneBuild(build); fn(b);
+    const dropped = (b.side !== null && !FM1_FEATURES.sides) || ((b.badge !== null || b.logo !== null || b.bezel !== null) && !FM1_FEATURES.badge);
+    norm(b);
+    if (dropped) setFlashSoon((n) => n + 1);   // the part the editor does not offer yet is gone: the SOON tags flash
+    setBuild(b); setThemeId(""); };
   // paints the selected part (what `target` points at) with a color, on the build it is given
   function paint(b: Fm1Build, id: string) {
     if (target.k === "fp") {
@@ -176,7 +181,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     b.knobs[slot] = k;
   });
 
-  const loadBuild = (b: Fm1Build, id: string) => { setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
+  const loadBuild = (b: Fm1Build, id: string) => { setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
   const applyTheme = (id: string) => {
     const t = FIXED_THEMES.find((x) => x.id === id);
     if (t) return loadBuild(t.build, id);
@@ -222,6 +227,9 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const sel = selKnob ? shown.knobs[selKnob] : null;
   const live = info.launched;
   const waitBlurb = `The FM1_Kz cases and knobs are almost here. Join the list and get ${SITE.waitlist.discountPercent}% off at launch, we will email you when the listing goes live.`;
+
+  // the current build carries parts the public editor does not offer (a fixed theme with sides or a firmware badge)
+  const hasExclusive = (build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null || build.bezel !== null) && !FM1_FEATURES.badge);
 
   const codePanel = (
     <>
@@ -269,7 +277,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             ...(isDraft && !editingSaved ? [{ id: "__draft", name: "Not saved", build }] : []),
           ].map((t) => ({
             id: t.id, name: t.name, draft: t.id === "__draft" || t.id === editingSaved, removable: t.id !== "__draft" && t.id !== editingSaved && !FIXED_THEMES.some((f) => f.id === t.id),
-            thumb: <Fm1Thumb build={norm({ ...cloneBuild(t.build), mode })} hex={hex} factory={fac} />,
+            thumb: <Fm1Thumb build={FIXED_THEMES.some((f) => f.id === t.id) ? { ...t.build, mode } : norm({ ...cloneBuild(t.build), mode })} hex={hex} factory={fac} />,
           }))}
           onRemove={(id) => { const list = saved.filter((x) => x.id !== id); setSaved(list); storeSaved(list); }}
           activeId={isDraft ? editingSaved ?? "__draft" : themeId || null}
@@ -282,6 +290,12 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           }}
         />
       </div>
+
+      {hasExclusive && (
+        <p className="mb-4 -mt-2 border-l-2 border-accent pl-3 text-[11px] text-text-secondary">
+          This theme includes exclusive parts that are not open for customization yet. You can order it as it is; changing anything removes them.
+        </p>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* 3D */}
@@ -468,7 +482,10 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                 <span key={flashSoon} className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2"
                   style={flashSoon > 0 ? { animation: "soonFlash 1.4s steps(1, end) 1" } : undefined}>SIDES COLOR · SOON</span>
               )}
-              {!FM1_FEATURES.badge && <span className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2">FIRMWARE BADGES · SOON</span>}
+              {!FM1_FEATURES.badge && (
+                <span key={`b${flashSoon}`} className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2"
+                  style={flashSoon > 0 ? { animation: "soonFlash 1.4s steps(1, end) 1" } : undefined}>FIRMWARE BADGES · SOON</span>
+              )}
             </div>
           )}
 
