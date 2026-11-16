@@ -3,6 +3,7 @@ import { useColorsStore } from "./useColorsStore.ts";
 import type { FilamentColor } from "@/types/index.ts";
 import { colorsStore } from "@/data/colorsStore.ts";
 import { exportColorsTs } from "./exportUtils.ts";
+import { ColorLimitsAdmin } from "./ColorLimitsAdmin.tsx";
 
 interface EditingColor {
   id: string;
@@ -189,6 +190,7 @@ export function ColorsAdmin() {
 
   return (
     <div>
+      <ColorLimitsAdmin colors={colors} />
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-text-secondary">{colors.length} colors</p>
         <div className="flex gap-2">

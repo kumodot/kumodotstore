@@ -5,11 +5,12 @@
 // the tools only ever show these colors, and a code or saved theme that already uses another color
 // still loads and still draws correctly.
 //
-// Keys: "fm1-kz" (FM1_Kz cases and knobs) and "pokz" (Pocket Operator cases).
-// Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue, PU Purple, LG Light Gray,
-//      MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
+// Written by the admin (Colors tab, "Colors per product"). Keys: "fm1-kz" (FM1_Kz cases and knobs) and
+// "pokz" (Pocket Operator cases). Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue,
+// PU Purple, LG Light Gray, MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
 export const COLOR_LIMITS: Record<string, string[] | undefined> = {
-  // "fm1-kz": ["WH", "BK", "RD", "OR", "YE", "GR", "BL", "LG", "MG", "DG"],
+  "fm1-kz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "DG", "WH", "BK"],
+  "pokz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "MG", "DG", "WH", "BK"],
 };
 
 export function offeredColors<T extends { id: string; available: boolean }>(line: string, all: T[]): T[] {

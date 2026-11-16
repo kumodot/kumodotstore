@@ -8,6 +8,8 @@ import { colorsStore } from "@/data/colorsStore.ts";
 import { useKustomizer } from "./hooks/useKustomizer.ts";
 import { exportGridAsImage } from "./utils/imageExport.ts";
 import { ButtonGrid } from "./components/ButtonGrid.tsx";
+import { SaveThemeModal } from "@/components/ui/SaveThemeModal.tsx";
+import { ConfirmModal } from "@/components/ui/ConfirmModal.tsx";
 import { ThemeFilmstrip } from "@/components/ui/ThemeFilmstrip.tsx";
 import { PokzThumb } from "./components/PokzThumb.tsx";
 import { CodeInput } from "./components/CodeInput.tsx";
@@ -52,8 +54,27 @@ export function KustomizerPage() {
 
   const kustomizer = useKustomizer(model, templates);
   const [sound, setSound] = useState(isSoundOn);
+  const [pendingTheme, setPendingTheme] = useState<string | null>(null);
+  const [naming, setNaming] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [origin, setOrigin] = useState<string | null>(null);   // the saved theme the buyer is editing, if any
   const [savedThemes, setSavedThemes] = useState<SavedTheme[]>(() => loadSavedThemes(model.id));
   useEffect(() => { setSavedThemes(loadSavedThemes(model.id)); }, [model.id]);
+  const nextName = () => `Custom ${Math.max(0, ...savedThemes.map((t) => Number(/^Custom (\d+)$/.exec(t.name)?.[1] ?? 0))) + 1}`;
+  const saveCurrent = (name = nextName()) => {
+    const taken = new Set([...templates, ...savedThemes].map((t) => t.name));
+    let unique = name;
+    for (let i = 2; taken.has(unique); i++) unique = `${name} ${i}`;
+    persistSaved([...savedThemes, { name: unique, code: kustomizer.formattedOrderCode }]);
+    return unique;
+  };
+  // the buyer's own, unsaved customization shows up as an extra card in the strip ("Not saved")
+  const isDraft = !kustomizer.selectedTemplate && !savedThemes.some((x) => x.code === kustomizer.formattedOrderCode);
+  const editingSaved = isDraft && origin && savedThemes.some((x) => x.name === origin) ? origin : null;   // shows "Update?" on that card
+  const loadTheme = (id: string) => {
+    const t = templates.find((x) => x.name === id) ?? savedThemes.find((x) => x.name === id);
+    if (t) { setOrigin(savedThemes.some((x) => x.name === id) ? id : null); kustomizer.applyTemplate(t); }
+  };
   const persistSaved = (list: SavedTheme[]) => {
     setSavedThemes(list);
     try { localStorage.setItem(savedKey(model.id), JSON.stringify(list)); } catch { /* private mode */ }
@@ -194,16 +215,18 @@ export function KustomizerPage() {
           aspect="aspect-[3/4]"
           items={[
             ...templates.map((t) => ({ id: t.name, name: t.name, thumb: <PokzThumb code={t.code} />, removable: false })),
-            ...savedThemes.map((t) => ({ id: t.name, name: t.name, thumb: <PokzThumb code={t.code} />, removable: true })),
+            ...savedThemes.map((t) => t.name === editingSaved
+              ? { id: t.name, name: "Update?", draft: true, thumb: <PokzThumb code={kustomizer.formattedOrderCode} />, removable: false }
+              : { id: t.name, name: t.name, thumb: <PokzThumb code={t.code} />, removable: true }),
+            ...(isDraft && !editingSaved ? [{ id: "__draft", name: "Not saved", draft: true, thumb: <PokzThumb code={kustomizer.formattedOrderCode} />, removable: false }] : []),
           ]}
-          activeId={kustomizer.selectedTemplate?.name ?? null}
+          activeId={isDraft ? editingSaved ?? "__draft" : kustomizer.selectedTemplate?.name ?? savedThemes.find((x) => x.code === kustomizer.formattedOrderCode)?.name ?? null}
           onSelect={(id) => {
-            const t = templates.find((x) => x.name === id) ?? savedThemes.find((x) => x.name === id);
-            if (t) kustomizer.applyTemplate(t);
-          }}
-          onSave={() => {
-            const n = Math.max(0, ...savedThemes.map((t) => Number(/^Custom (\d+)$/.exec(t.name)?.[1] ?? 0))) + 1;
-            persistSaved([...savedThemes, { name: `Custom ${n}`, code: kustomizer.formattedOrderCode }]);
+            if (id === "__draft") return setNaming(true);   // the unsaved card: offer to save it
+            if (id === editingSaved) return setUpdating(true);   // an edited saved theme: update it or save a new one
+            // own edits that are not saved as a theme would be lost: ask first
+            if (isDraft) return setPendingTheme(id);
+            loadTheme(id);
           }}
           onRemove={(id) => persistSaved(savedThemes.filter((t) => t.name !== id))}
         />
@@ -255,6 +278,20 @@ export function KustomizerPage() {
           </div>
         </div>
       </div>
+      {updating && editingSaved && (
+        <ConfirmModal title="Update this theme?" text={`You changed "${editingSaved}". Update it, or keep it as it was and save your version as a new theme.`}
+          yes="Save as new" no="Cancel"
+          alt={{ label: "Update", onClick: () => { persistSaved(savedThemes.map((x) => (x.name === editingSaved ? { ...x, code: kustomizer.formattedOrderCode } : x))); setOrigin(null); setUpdating(false); } }}
+          onYes={() => { setUpdating(false); setNaming(true); }} onNo={() => setUpdating(false)} />
+      )}
+      {naming && (
+        <SaveThemeModal defaultName={nextName()} onClose={() => setNaming(false)}
+          onSave={(name) => { saveCurrent(name); setNaming(false); }} />
+      )}
+      {pendingTheme && (
+        <ConfirmModal title="Change theme?" text="Your current customization will be lost. Save it as a new theme first to keep it."
+          yes="Load without saving" alt={{ label: "Save mine, then load", onClick: () => { saveCurrent(); loadTheme(pendingTheme); setPendingTheme(null); } }} onYes={() => { loadTheme(pendingTheme); setPendingTheme(null); }} onNo={() => setPendingTheme(null)} />
+      )}
     </div>
   );
 }

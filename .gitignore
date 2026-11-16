@@ -30,3 +30,4 @@ push-products.bat
 *.sw?
 kustomizer-fm1-dev.bat
 publish.bat
+Store_Studio.bat

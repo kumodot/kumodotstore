@@ -6,6 +6,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { SLOTS, type Fm1Build, type Slot } from "./fm1Code.ts";
 import { logoColor } from "./fm1Color.ts";
+import { loadLogo, logoCanvas } from "./fm1Logo.ts";
+import { firmwareById } from "../../data/firmwares.ts";
 
 export type FocusTarget = Slot | "faceplate" | null;
 /** What a 3D click or hover resolves to: one editable part. */
@@ -38,6 +40,9 @@ export class Fm1Scene {
   private base: Record<string, THREE.Color> = {};
   // Selection hint: four corner brackets on the screen-space bounding box of the part being edited
   private hl: string[] = [];
+  private applied: { b: Fm1Build; f: Factory } | null = null;   // to redraw when a logo finishes loading
+  private logoTex = new Map<string, THREE.CanvasTexture>();
+  private logoQuad: THREE.Mesh | null = null;
   private overlay!: SVGSVGElement;
   private brSel!: { halo: SVGPathElement; light: SVGPathElement };     // the part being edited
   private brHover!: { halo: SVGPathElement; light: SVGPathElement };   // the part under the mouse (2D or 3D)
@@ -152,6 +157,7 @@ export class Fm1Scene {
   }
 
   apply(b: Fm1Build, f: Factory) {
+    this.applied = { b, f };
     const set = (n: string, hex: string) => {
       if (!this.mats[n]) return;
       this.base[n] = new THREE.Color(hex);
@@ -186,21 +192,71 @@ export class Fm1Scene {
       (e.material as THREE.LineBasicMaterial).color.copy(ghostTint);
       e.visible = !caseMode;
     }
+    // each firmware needs one bezel; JIANT's own bezel is used when the model has it, else the extended one
+    const fw = b.badge ? firmwareById(b.badge) : undefined;
+    const has = (n: string) => this.meshes.some((m) => m.name === n);
+    const bezelType = fw?.bezel === "jiant" && has("bezel_jiant") ? "jiant" : "ext";
+    const plateName = b.badge === null || !fw?.logo ? null   // BLANK: no plate at all
+      : [`bezel_logo_${b.badge}`, `bezel_logo_${bezelType}`, "bezel_logo_blank", "bezel_logo_ext"].find(has) ?? null;
     for (const m of this.meshes) {
       const n = m.name;
       let vis = true;
       // basic bezel = the plain ring; badge bezel = ring + strip for the firmware name + its logo plate
       if (n === "bezel_simple") vis = b.badge === null;
-      else if (n === "bezel_ext") vis = b.badge !== null;
-      else if (n.startsWith("bezel_logo_")) vis = n === `bezel_logo_${b.badge}`;
+      else if (n === "bezel_ext") vis = b.badge !== null && bezelType !== "jiant";
+      else if (n === "bezel_jiant") vis = b.badge !== null && bezelType === "jiant";
+      else if (n.startsWith("bezel_logo_")) vis = n === plateName;
       if (!caseMode && (n.startsWith("faceplate_") || n.startsWith("bezel_"))) vis = false;
       const k = KNOB_RE.exec(n);
       if (k) {
         const kn = b.knobs[k[1] as Slot];
-        vis = !!kn && kn.style === k[2] && kn.height === k[3] && !k[5];
+        // a variant the proxy model does not have yet (classic long before v0.7) shows its short sibling instead
+        const has3d = !!kn && has(`knob_${k[1]}_${kn.style}_${kn.height}_body`);
+        vis = !!kn && kn.style === k[2] && (has3d ? kn.height : "short") === k[3] && !k[5];
       }
       m.visible = vis;
     }
+    this.applyLogo(b, plateName, fw?.logo ?? null);
+  }
+
+  /** The firmware logo: its SVG painted in the logo color on a thin quad lying on the logo plate. */
+  private applyLogo(b: Fm1Build, plateName: string | null, file: string | null) {
+    const plate = plateName ? this.meshes.find((m) => m.name === plateName) : undefined;
+    const mat = plate?.material as THREE.MeshStandardMaterial | undefined;
+    if (!plate || !file || !this.applied) {
+      if (this.logoQuad) this.logoQuad.visible = false;
+      if (mat) mat.visible = true;   // BLANK or no logo yet: the plain colored plate
+      return;
+    }
+    loadLogo(file).then((l) => {
+      if (!l || !this.applied || this.applied.b.badge !== b.badge) return;
+      const geo = plate.geometry;
+      geo.computeBoundingBox();
+      const bb = geo.boundingBox!, size = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
+      if (!this.logoQuad) {
+        this.logoQuad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+        this.logoQuad.rotation.x = -Math.PI / 2;   // lies flat, the top of the picture points to the back of the device
+        this.logoQuad.raycast = () => {};            // clicks go to the plate
+      }
+      const q = this.logoQuad;
+      if (q.parent !== plate) plate.add(q);
+      q.scale.set(size.x, size.z, 1);
+      q.position.set(c.x, bb.max.y + 0.00006, c.z);
+      const color = b.logo ? this.colorOf.hex(b.logo) : logoColor(this.colorOf.hex(b.accent), this.colorOf.hex(b.bezel ?? b.accent));
+      const key = `${file}|${color}`;
+      let tex = this.logoTex.get(key);
+      if (!tex) {
+        tex = new THREE.CanvasTexture(logoCanvas(l, 1024, Math.max(64, Math.round(1024 * size.z / size.x)), color));
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;
+        this.logoTex.set(key, tex);
+      }
+      const qm = q.material as THREE.MeshStandardMaterial;
+      qm.map = tex;
+      qm.needsUpdate = true;
+      q.visible = true;
+      (plate.material as THREE.MeshStandardMaterial).visible = false;   // the picture replaces the plain plate (still clickable)
+    });
   }
   /** set by the React side: filament id -> hex */
   colorOf = { hex: (id: string): string => id };

@@ -9,6 +9,7 @@ export interface FilmItem {
   name: string;
   thumb: ReactNode;
   removable?: boolean;   // a theme the buyer saved on this device: shows a small x to delete it
+  draft?: boolean;       // the buyer's own unsaved customization: its name is shown in orange
 }
 
 export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, label = "PICK A THEME", aspect = "aspect-[4/3]" }: {
@@ -91,7 +92,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
                     {it.thumb}
                   </span>
                 </span>
-                <span className={`block mono mt-1.5 h-5 leading-5 text-text-primary whitespace-nowrap
+                <span className={`block mono mt-1.5 h-5 leading-5 ${it.draft ? "!text-accent" : "text-text-primary"} whitespace-nowrap
                                   ${open ? "" : "max-w-[116px] truncate group-hover:max-w-none group-hover:overflow-visible"}`}>
                   <Scramble text={it.name} />
                 </span>

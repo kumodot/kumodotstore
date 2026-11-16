@@ -12,6 +12,10 @@ export function OrderCopiedModal({ code, copied, onSaveImage, onClose }: {
   onClose: () => void;
 }) {
   const [saved, setSaved] = useState(false);
+  const [again, setAgain] = useState(copied);
+  const copyAgain = async () => {
+    try { await navigator.clipboard.writeText(code); setAgain(true); } catch { /* blocked: the code is selectable above */ }
+  };
   const save = async () => {
     await onSaveImage();
     setSaved(true);
@@ -31,13 +35,17 @@ export function OrderCopiedModal({ code, copied, onSaveImage, onClose }: {
         onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
       <div className="bg-surface-card border border-border w-full max-w-md p-6 shadow-2xl">
-        <p className="mono text-accent mb-2">{copied ? "CODE COPIED" : "COPY YOUR CODE"}</p>
+        <p className="mono text-accent mb-2">{again ? "CODE COPIED" : "COPY YOUR CODE"}</p>
         <GlitchTitle as="h3" className="ks block text-3xl text-text-primary mb-4" text="THANK YOU FOR KUSTOMIZING!" auto={false} />
         <code className="block font-mono text-xs text-accent bg-surface border border-border p-2 mb-4 break-all whitespace-pre-wrap select-all max-h-28 overflow-auto">
           {code}
         </code>
+        <button onClick={copyAgain}
+          className="w-full min-h-11 mb-4 -mt-2 border border-accent text-accent font-mono text-xs uppercase tracking-[.06em] cursor-pointer hover:bg-accent hover:text-[#0D0D0C] transition-colors">
+          {again ? "Copied ✓  Copy code again" : "Copy code"}
+        </button>
 
-        <p className="text-sm text-text-secondary mb-3">To order, add your code to the listing on Etsy:</p>
+        <p className="text-sm text-text-secondary mb-3">This code describes your exact customization for the seller (Kumodot Store). To order, add it to the listing on Etsy:</p>
         <ol className="text-sm text-text-primary space-y-2 mb-4 list-none">
           <li><span className="text-accent">1.</span> Open the Kumodot Store listing on Etsy.</li>
           <li><span className="text-accent">2.</span> Paste the code in the <span className="mono text-text-primary">PERSONALIZATION</span> box (Ctrl+V, or tap and hold on a phone).</li>

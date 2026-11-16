@@ -4,6 +4,7 @@ import type { VariationConfig } from "@/types/index.ts";
 import type { ColorTemplate } from "@/types/index.ts";
 import type { ShippingRegion } from "@/data/shipping.ts";
 import type { StoreMode } from "@/data/storeMode.ts";
+import { studioWrite } from "./studioApi.ts";
 
 export async function exportStoreModeTs(mode: StoreMode): Promise<void> {
   const content = `export interface StoreMode {
@@ -21,6 +22,56 @@ export const STORE_MODE: StoreMode = {
 };
 `;
   downloadFile("storeMode.ts", content);
+}
+
+export async function exportFm1ThemesTs(themes: { id: string; name: string; code: string }[]): Promise<void> {
+  const used = new Set<string>();
+  const rows = themes.map((t, i) => {
+    const slug = (t.id || t.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `theme-${i + 1}`;
+    let id = slug;
+    for (let n = 2; used.has(id); n++) id = `${slug}-${n}`;
+    used.add(id);
+    return `  { id: ${JSON.stringify(id)}, name: ${JSON.stringify(t.name.trim())}, code: ${JSON.stringify(t.code.trim())} },`;
+  });
+  const content = `// FM1_Kz ready themes (the strip at the top of the Kustomizer).
+//
+// A theme is just a name and an order code. To add one: design it in the Kustomizer, press Copy, then paste the
+// code in the Store Studio, tab "FM1 Themes". The Studio writes this file. Ids are codenames, not public names.
+export interface Fm1ThemeData { id: string; name: string; code: string }
+
+export const FM1_THEMES: Fm1ThemeData[] = [
+${rows.join("\n")}
+];
+`;
+  downloadFile("fm1Themes.ts", content);
+}
+
+export async function exportColorAvailabilityTs(limits: Record<string, string[]>, activeIds: string[]): Promise<void> {
+  // A product with every active color ticked is left out: it offers all active colors, new ones included.
+  const entries = Object.entries(limits)
+    .map(([line, ids]) => [line, activeIds.filter((id) => ids.includes(id))] as const)
+    .filter(([, ids]) => ids.length !== activeIds.length)
+    .map(([line, ids]) => `  ${JSON.stringify(line)}: [${ids.map((id) => JSON.stringify(id)).join(", ")}],`);
+  const content = `// Colors offered per product line.
+//
+// Every color marked \`available\` in colors.ts (the admin "Colors" tab) is offered by default.
+// To LIMIT a line, list the ids it may offer below. To grow it later, add an id to the list. That is all:
+// the tools only ever show these colors, and a code or saved theme that already uses another color
+// still loads and still draws correctly.
+//
+// Written by the admin (Colors tab, "Colors per product"). Keys: "fm1-kz" (FM1_Kz cases and knobs) and
+// "pokz" (Pocket Operator cases). Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue,
+// PU Purple, LG Light Gray, MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
+export const COLOR_LIMITS: Record<string, string[] | undefined> = {
+${entries.join("\n")}
+};
+
+export function offeredColors<T extends { id: string; available: boolean }>(line: string, all: T[]): T[] {
+  const limit = COLOR_LIMITS[line];
+  return all.filter((c) => c.available && (!limit || limit.includes(c.id)));
+}
+`;
+  downloadFile("colorAvailability.ts", content);
 }
 
 export async function exportColorsTs(colors: FilamentColor[]): Promise<void> {
@@ -214,6 +265,8 @@ export function getCheckoutCountriesGrouped(): { direct: CheckoutCountry[]; vat:
 }
 
 async function downloadFile(filename: string, content: string): Promise<void> {
+  // Store Studio running: save straight into src/data, no file dialog
+  if (await studioWrite(filename, content)) return;
   try {
     const handle = await (window as unknown as { showSaveFilePicker: (o: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker({
       suggestedName: filename,

@@ -2,6 +2,8 @@ import { useId, type ReactNode } from "react";
 import { GROUPS, SLOT_LABEL, type Fm1Build, type Slot } from "./fm1Code.ts";
 import { FM1_TOP } from "./fm1TopShapes.ts";
 import { logoColor } from "./fm1Color.ts";
+import { fitLogo, useLogo } from "./fm1Logo.ts";
+import { firmwareById } from "../../data/firmwares.ts";
 
 // Top view of the FM1 built from the vectorized reference (fm1TopShapes.ts). One component draws both
 // the filmstrip thumbnails (no handlers) and the big click-to-customize panel (handlers + group frames).
@@ -14,13 +16,14 @@ export interface TopViewInteraction {
   selFp: FpPart | null;                         // highlight on the faceplate or the bezel
   selGroup: { g: "L" | "R"; part: "body" | "cap" } | null;
   groupVal: (g: "L" | "R", part: "body" | "cap") => string | null;   // null = mixed
-  onKnob: (s: Slot) => void;
+  onKnob: (s: Slot, part: "body" | "cap") => void;
   onFaceplate: () => void;
   onBezel: () => void;
   onLogo: () => void;
   onGroup: (g: "L" | "R", part: "body" | "cap") => void;
-  hover: { slot?: Slot; fp?: FpPart } | null;           // what the mouse is over (2D or 3D)
-  onHover: (h: { slot?: Slot; fp?: FpPart } | null) => void;
+  hover: { slot?: Slot; part?: "body" | "cap"; fp?: FpPart; group?: { g: "L" | "R"; part: "body" | "cap" } } | null;           // what the mouse is over (2D or 3D)
+  onHover: (h: { slot?: Slot; part?: "body" | "cap"; fp?: FpPart; group?: { g: "L" | "R"; part: "body" | "cap" } } | null) => void;
+  label?: string;                                       // name of the part being edited, shown on the empty key area
 }
 
 const ORANGE = "#FF5A1F";
@@ -38,8 +41,10 @@ const BADGE_EXTRA = 80;
 const rrect = (x: number, y: number, w: number, h: number, r: number) =>
   `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
 const BADGE_OUTER = rrect(BEZEL_BOX.x, BEZEL_BOX.y, BEZEL_BOX.w, BEZEL_BOX.h + BADGE_EXTRA, 46);
-// logo placeholder plate on the strip (267 x 82 px, centered in the strip), accent or black/white
-const LOGO = { x: BEZEL_BOX.x + BEZEL_BOX.w / 2 - 133.5, y: 549, w: 267, h: 82 };
+// The logo area on the strip: from just under the screen hole down to the bezel edge, as wide as the hole.
+const SCREEN_BOX = bbox(FM1_TOP.screen);
+const LOGO_TOP = SCREEN_BOX.y + SCREEN_BOX.h + 4;
+const LOGO = { x: SCREEN_BOX.x, y: LOGO_TOP, w: SCREEN_BOX.w, h: BEZEL_BOX.y + BEZEL_BOX.h + BADGE_EXTRA - 14 - LOGO_TOP };
 
 /** Four corner marks around a box (a "this is selected" hint), near-white, no outline. */
 function Brackets({ x, y, w, h, pad, len, soft }: { x: number; y: number; w: number; h: number; pad: number; len: number; soft?: boolean }) {
@@ -75,6 +80,12 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
   const hoverable = ix ? "cursor-pointer" : "";
 
   const badge = plate && build.badge !== null;
+  const fw = build.badge ? firmwareById(build.badge) : undefined;
+  const showLogo = badge && !!fw?.logo;   // BLANK: nothing at all on the strip
+  const logo = useLogo(badge ? fw?.logo ?? null : null);
+  const maskId = useId();
+  const fit = logo ? fitLogo(logo, LOGO.x, LOGO.y, LOGO.w, LOGO.h) : null;
+  const logoFill = build.logo ? hex(build.logo) : logoColor(hex(build.accent), hex(build.bezel ?? build.accent));
   const outerBezel = badge ? BADGE_OUTER : bezelOuter;
   const bezelBox = badge ? { ...BEZEL_BOX, h: BEZEL_BOX.h + BADGE_EXTRA } : BEZEL_BOX;
   const plateD = [outline, ...slots.map((s) => circle(holes[s].cx, holes[s].cy, holes[s].r)), ...keys, outerBezel].join("");
@@ -93,6 +104,16 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
       <path d={outline} fill={factory.body} />
       {keys.map((d, i) => <path key={i} d={d} fill={factory.keys} />)}
       <path d={screen} fill="#050505" />
+      {/* the big unused key area shows the name of the part being edited / hovered, like the label on the 3D view */}
+      {ix?.label && (() => {
+        const b = bbox(keys[0]), fs = Math.min(120, (b.w - 140) / (ix.label.length * 0.66)), tw = Math.min(b.w - 40, ix.label.length * fs * 0.66 + 80);
+        return (
+          <g pointerEvents="none">
+            <rect x={b.x + b.w / 2 - tw / 2} y={b.y + b.h / 2 - fs * 0.85} width={tw} height={fs * 1.7} fill="#0D0D0C" fillOpacity=".8" />
+            <text x={b.x + b.w / 2} y={b.y + b.h / 2} textAnchor="middle" dominantBaseline="central" fill="#fff" fontSize={fs} className="ks">{ix.label}</text>
+          </g>
+        );
+      })()}
 
       {plate && (
         <>
@@ -106,16 +127,27 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
             onPointerEnter={ix ? () => ix.onHover({ fp: "bezel" }) : undefined}
             onPointerLeave={ix ? () => ix.onHover(null) : undefined}
             style={ix?.hover?.fp === "bezel" ? { filter: "brightness(1.3)" } : undefined} />
-          {badge && (
-            <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} rx="8" fill={build.logo ? hex(build.logo) : logoColor(hex(build.accent), bezelColor)}
-              className={hoverable} onClick={ix?.onLogo}
-              onPointerEnter={ix ? () => ix.onHover({ fp: "logo" }) : undefined}
-              onPointerLeave={ix ? () => ix.onHover(null) : undefined} />
+          {showLogo && (
+            <>
+              {/* the firmware logo (its SVG tinted with the logo color); BLANK has none, only the clickable strip */}
+              {fit && logo && (
+                <>
+                  <mask id={maskId} maskUnits="userSpaceOnUse" x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} style={{ maskType: "alpha" }}>
+                    <image href={`${import.meta.env.BASE_URL}logos/${fw!.logo}`} x={fit.x} y={fit.y} width={fit.w} height={fit.h} />
+                  </mask>
+                  <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} fill={logoFill} mask={`url(#${maskId})`} pointerEvents="none" />
+                </>
+              )}
+              <rect x={LOGO.x} y={LOGO.y} width={LOGO.w} height={LOGO.h} rx="8" fill="transparent"
+                className={hoverable} onClick={ix?.onLogo}
+                onPointerEnter={ix ? () => ix.onHover({ fp: "logo" }) : undefined}
+                onPointerLeave={ix ? () => ix.onHover(null) : undefined} />
+            </>
           )}
           {ix?.hover?.fp === "bezel" && ix.selFp !== "bezel" && <Brackets x={bezelBox.x} y={bezelBox.y} w={bezelBox.w} h={bezelBox.h} pad={30} len={60} soft />}
           {ix?.hover?.fp && ix.hover.fp !== "bezel" && ix.hover.fp !== "logo" && <Brackets x={0} y={0} w={w} h={h} pad={46} len={90} soft />}
-          {badge && ix?.hover?.fp === "logo" && ix.selFp !== "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={16} len={30} soft />}
-          {badge && ix?.selFp === "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={10} len={34} />}
+          {showLogo && ix?.hover?.fp === "logo" && ix.selFp !== "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={16} len={30} soft />}
+          {showLogo && ix?.selFp === "logo" && <Brackets x={LOGO.x} y={LOGO.y} w={LOGO.w} h={LOGO.h} pad={10} len={34} />}
           {/* selection hint: four corner brackets on the shape's bounding box, no outline */}
           {ix && (ix.selFp === "body" || ix.selFp === "side" || ix.selFp === "accent") && (
             <Brackets x={0} y={0} w={w} h={h} pad={26} len={110} />
@@ -136,7 +168,8 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
               const on = ix.selGroup?.g === g && ix.selGroup.part === part;
               const cx = x0 + 52 + i * 62;
               return (
-                <g key={part} className="cursor-pointer" onClick={() => ix.onGroup(g, part)}>
+                <g key={part} className="cursor-pointer" onClick={() => ix.onGroup(g, part)}
+                  onPointerEnter={() => ix.onHover({ group: { g, part } })} onPointerLeave={() => ix.onHover(null)}>
                   <circle cx={cx} cy={y0} r="26" fill={v ? hex(v) : `url(#${hatch})`} stroke={on ? ORANGE : "#0D0D0C"} strokeWidth={on ? 8 : 5} />
                   {part === "cap" && <circle cx={cx} cy={y0} r="9" fill="#0D0D0C" />}
                 </g>
@@ -151,13 +184,21 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
         const k = build.knobs[s];
         const ink = lum(hex(k.cap)) > 0.55 ? "#0D0D0C" : "#EEECE6";
         return (
-          <g key={s} className={hoverable} onClick={ix ? () => ix.onKnob(s) : undefined}
-            onPointerEnter={ix ? () => ix.onHover({ slot: s }) : undefined}
-            onPointerLeave={ix ? () => ix.onHover(null) : undefined}
+          <g key={s} className={hoverable} onPointerLeave={ix ? () => ix.onHover(null) : undefined}
             style={ix?.hover?.slot === s ? { filter: "brightness(1.25)" } : undefined}>
             {plate && !ix && <rect x={cx - r * 0.55} y={cy + r + 12} width={r * 1.1} height="9" fill={hex(build.accent)} />}
-            <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} stroke="#0D0D0C" strokeWidth="6" />
-            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} stroke="#0D0D0C" strokeWidth="3" />
+            <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} stroke="#0D0D0C" strokeWidth="6" pointerEvents="none" />
+            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} stroke="#0D0D0C" strokeWidth="3" pointerEvents="none" />
+            {ix && (
+              <>
+                {/* two hit areas that never overlap: the body is a ring (donut), the cap is the disc inside it */}
+                <path fillRule="evenodd" fill="transparent"
+                  d={`${circle(cx, cy, r * 0.9)}${circle(cx, cy, r * 0.52)}`}
+                  onClick={() => ix.onKnob(s, "body")} onPointerEnter={() => ix.onHover({ slot: s, part: "body" })} />
+                <circle cx={cx} cy={cy} r={r * 0.52} fill="transparent"
+                  onClick={() => ix.onKnob(s, "cap")} onPointerEnter={() => ix.onHover({ slot: s, part: "cap" })} />
+              </>
+            )}
             {ix?.hover?.slot === s && ix.selKnob !== s && <Brackets x={cx - r * 0.9} y={cy - r * 0.9} w={r * 1.8} h={r * 1.8} pad={24} len={30} soft />}
             {ix?.selKnob === s && <Brackets x={cx - r * 0.9} y={cy - r * 0.9} w={r * 1.8} h={r * 1.8} pad={12} len={34} />}
             {ix && (

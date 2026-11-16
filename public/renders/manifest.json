@@ -1,3 +1,27 @@
 {
-  "knobs": {}
+  "caps": {
+    "short": "knob_cap_short.webp",
+    "long": "knob_cap_long.webp",
+    "vol_long": "knob_vol_cap_long.webp"
+  },
+  "knobs": {
+    "classic_long": {
+      "body": "knob_classic_long_body.webp",
+      "cap": "knob_classic_long_cap.webp"
+    },
+    "classic_short": {
+      "body": "knob_classic_short_body.webp"
+    },
+    "groove_long": {
+      "body": "knob_groove_long_body.webp"
+    },
+    "vol_classic_long": {
+      "body": "knob_vol_classic_long_body.webp",
+      "cap": "knob_vol_classic_long_cap.webp"
+    },
+    "vol_groove_long": {
+      "body": "knob_vol_groove_long_body.webp"
+    }
+  },
+  "base": "knob_base.webp"
 }

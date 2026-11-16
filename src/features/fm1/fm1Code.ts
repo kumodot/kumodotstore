@@ -7,7 +7,7 @@
 //   L = vol,nav1,nav2,nav3   R = p1,p2,p3,p4   (UI labels V S P A / K1-K4)
 // side is "-" when the sides follow the faceplate color, else a color id (the faceplate wraps the
 // sides, some themes color them). bezel is "=" when it follows the accent. badge is "-" for the basic bezel,
-// or a firmware code (SL JI FE HO BG BL) for the badge bezel with a strip for the firmware name. A 4 field F
+// or a firmware code (SL JI SH BG BL) for the badge bezel with a strip for the firmware name. A 4 field F
 // (no badge) still decodes as the basic bezel. logo is the color of the firmware logo on the badge bezel:
 // "-" = automatic (accent if it reads on the bezel, else black or white), or a color id. F may have 4, 5 or 6 fields.
 // check = 2 chars, base 36 uppercase. Different prefixes on purpose: a knobs
@@ -16,6 +16,8 @@
 //
 // Changed from the alpha's v1 (one style/height/cap per group) because the
 // handoff UX needs per-knob style, height and cap color. v1 never went public.
+import { FIRMWARE_LIST, type FirmwareId } from "../../data/firmwares.ts";
+
 import { COLORS_BY_ID } from "../../data/colors.ts";
 
 export type Style = "classic" | "groove";
@@ -23,6 +25,10 @@ export type Height = "short" | "long";
 export const SLOTS = ["vol", "nav1", "nav2", "nav3", "p1", "p2", "p3", "p4"] as const;
 export type Slot = (typeof SLOTS)[number];
 export const GROUPS = { L: SLOTS.slice(0, 4), R: SLOTS.slice(4) } as const;
+/** Readable names for the buyer (the short SLOT_LABEL stays on the 2D top view circles). */
+export const SLOT_NAME: Record<Slot, string> = {
+  vol: "VOL", nav1: "SEL.", nav2: "PRESET", nav3: "ALG.", p1: "K1", p2: "K2", p3: "K3", p4: "K4",
+};
 export const SLOT_LABEL: Record<Slot, string> = {
   vol: "V", nav1: "S", nav2: "P", nav3: "A", p1: "K1", p2: "K2", p3: "K3", p4: "K4",
 };
@@ -39,11 +45,13 @@ export interface Fm1Build {
   knobs: Record<Slot, Knob>;
 }
 
-export const FIRMWARES = ["sloop", "jiant", "felucca", "hortator", "baudgirl", "blank"] as const;
-export type Firmware = (typeof FIRMWARES)[number];
-const FW_CODE: Record<Firmware, string> = { sloop: "SL", jiant: "JI", felucca: "FE", hortator: "HO", baudgirl: "BG", blank: "BL" };
+// The firmware list (names, codes, logos, which bezel each one needs) lives in src/data/firmwares.ts.
+export const FIRMWARES = FIRMWARE_LIST.map((f) => f.id) as FirmwareId[];
+export type Firmware = FirmwareId;
+const FW_CODE = Object.fromEntries(FIRMWARE_LIST.map((f) => [f.id, f.code])) as Record<Firmware, string>;
 
-export const variantOk = (s: Style, h: Height) => !(s === "classic" && h === "long");
+// every style comes in short and long now (classic long was added with the v0.7 parts)
+export const variantOk = (_s: Style, _h: Height) => true;
 
 const checksum = (str: string) => {
   let a = 0;

@@ -14,7 +14,7 @@ export const SITE = {
   // Waiting list for the FM1_Kz launch (top bar + home). Same Apps Script waitlist, tab launch_fm1-kz.
   // One list for the whole FM1_Kz line (cases and knobs go live together): top bar, home and both Kustomizer pages.
   // discountCode must match the code created on Etsy exactly; percent is only the wording shown to the buyer.
-  waitlist: { id: "fm1-kz", name: "FM1_Kz", discountCode: "FM1KZLAUNCH", discountPercent: 5 },
+  waitlist: { id: "fm1-kz", name: "FM1_Kz", discountCode: "FM1KZLAUNCH", discountPercent: 5, discountUntil: "Nov 22" },
   navItems: [
     { label: "Home", path: "/" },
     { label: "Kustomizer", path: "/kustomize" },

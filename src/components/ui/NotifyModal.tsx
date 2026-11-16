@@ -6,7 +6,7 @@ import { useState } from "react";
 // modal moved here so the Kustomizer can share it, which keeps the count at 3.
 const BACKEND_URL = "https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec";
 
-export function NotifyModal({ productId, productName, type, title, blurb, discountCode, discountPercent, onClose }: {
+export function NotifyModal({ productId, productName, type, title, blurb, discountCode, discountPercent, discountUntil, onClose }: {
   productId: string;
   productName: string;
   type: "restock" | "launch";
@@ -14,6 +14,7 @@ export function NotifyModal({ productId, productName, type, title, blurb, discou
   blurb?: string;   // overrides the default line under it
   discountCode?: string;      // shown right after signing up (an Etsy code the shop created)
   discountPercent?: number;
+  discountUntil?: string;     // e.g. "Nov 22"
   onClose: () => void;
 }) {
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export function NotifyModal({ productId, productName, type, title, blurb, discou
             {discountCode && (
               <>
                 <p className="text-sm text-text-secondary mt-2">
-                  Your {discountPercent}% off code for launch day (use it at Etsy checkout):
+                  Your {discountPercent}% off code for launch day{discountUntil ? `, valid until ${discountUntil}` : ""} (use it at Etsy checkout):
                 </p>
                 <code className="block font-mono text-lg text-accent bg-surface border border-border p-2 mt-2 select-all">{discountCode}</code>
                 <div className="flex gap-2 mt-3">

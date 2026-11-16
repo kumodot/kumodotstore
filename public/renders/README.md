@@ -4,45 +4,30 @@ The Kustomizer shows a high quality knob picture when a buyer picks or recolors 
 Only images live here, never a 3D model: anything that reaches the browser can be copied, and a
 picture cannot be printed. Keep it that way.
 
-## Files, per variant
+## What to render (PNG, 1024 x 1024, transparent background, same camera and framing, nothing moved between renders)
 
-Variants are `<style>_<height>`: `classic_short`, `groove_short`, `groove_long` (and `classic_long` once it exists).
+A set is `<style>_<height>`: `classic_short`, `groove_short`, `groove_long`, later `classic_long`. Every set has 7 identical
+knobs and 1 different one, the volume knob.
 
-The **volume knob** has its own cap shape. If it also looks different, add entries named `vol_<style>_<height>` (for example `vol_groove_short`): the volume knob uses them first and falls back to the plain entry.
-
-| File | What it is |
+| File | Used by |
 |---|---|
-| `knob_<variant>.webp` | Neutral clay render of the whole knob, light gray material, soft studio light. Background removed (transparent). This carries all the shading. |
-| `knob_<variant>_body.webp` | Mask of the **body**: any color, only the alpha matters (opaque where the body is). |
-| `knob_<variant>_cap.webp` | Mask of the **cap**: same idea. |
+| `all_knobs_base.png` | The faceplate with its hole, no knob. Every knob. |
+| `cap_short.png`, `cap_long.png` | The cap of the plain knobs, one per height, shared by all styles. |
+| `vol_cap.png` | The cap of the volume knob (`vol_cap_short.png` / `vol_cap_long.png` instead, if it differs per height). |
+| `<set>_body.png`, e.g. `groove_long_body.png` | Body of the 7 plain knobs of that set. |
+| `vol_<set>_body.png`, e.g. `vol_groove_long_body.png` | Body of the volume knob of that set. |
 
-All three share the same canvas: square, 1024 x 1024 (or 512), same framing, same camera.
-Render the neutral pass with a mid-light gray (about #d9d9d9) so a white filament does not
-look dull after the multiply. Slight 3/4 view from above works best.
+Each layer's own alpha is its mask. Nothing is guessed or moved, so the layers must already line up.
 
-## manifest.json
+## Convert
 
-```json
-{
-  "knobs": {
-    "groove_short": {
-      "render": "knob_groove_short.webp",
-      "body": "knob_groove_short_body.webp",
-      "cap": "knob_groove_short_cap.webp"
-    }
-  }
-}
+```
+python tools/make_knob_render.py <folder with the PNGs>
 ```
 
-A variant with no entry simply shows no preview. Add entries as the renders arrive.
+Writes the 512 px webp files here and rebuilds `manifest.json`. Keep the source PNGs outside `public/`.
 
 ## How it is composed (in the browser, nothing is uploaded)
 
-body mask tinted with the body color + cap mask tinted with the cap color, then the neutral render
-multiplied on top, then cut to the knob shape. The color you pick is the swatch color; the render
-only adds light and shadow ("tint preview").
-
-## Later
-
-The same idea works for a short turntable video per variant (see TURNTABLE_PLAN_v0.1.md): the
-neutral video plus the two masks as images.
+base, then the body multiplied by the body color, then the cap multiplied by the cap color. Multiply keeps the
+shading of the render; each picture's alpha cuts its own shape. A knob that lacks its body or cap render shows no picture.

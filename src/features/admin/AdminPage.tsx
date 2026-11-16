@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sendTelegramTest, downloadTestCsv } from "@/utils/telegramNotify.ts";
+import { downloadTestCsv } from "@/utils/telegramNotify.ts";
 import { printTestOrderSlip } from "@/utils/orderSlip.ts";
 
 import { ColorsAdmin } from "./ColorsAdmin.tsx";
@@ -8,53 +8,19 @@ import { TemplatesAdmin } from "./TemplatesAdmin.tsx";
 import { ShippingAdmin } from "./ShippingAdmin.tsx";
 import { ConfiguratorsAdmin } from "./ConfiguratorsAdmin.tsx";
 import { StoreModeAdmin } from "./StoreModeAdmin.tsx";
+import { StudioBar } from "./StudioBar.tsx";
+import { Fm1ThemesAdmin } from "./Fm1ThemesAdmin.tsx";
 
-type Tab = "colors" | "products" | "templates" | "shipping" | "configurators" | "storemode";
+type Tab = "colors" | "products" | "templates" | "fm1themes" | "shipping" | "configurators" | "storemode";
 
-function TelegramTestButton() {
-  const [state, setState] = useState<"idle" | "sending" | "ok" | "error">("idle");
-
-  const handleTest = async () => {
-    setState("sending");
-    try {
-      await sendTelegramTest();
-      setState("ok");
-    } catch {
-      setState("error");
-    }
-    setTimeout(() => setState("idle"), 3000);
-  };
-
-  return (
-    <button
-      onClick={handleTest}
-      disabled={state === "sending"}
-      className={`text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer shrink-0
-        ${state === "ok" ? "bg-green-500/20 text-green-400 border-green-500/30"
-          : state === "error" ? "bg-red-500/20 text-red-400 border-red-500/30"
-          : "bg-surface-elevated border-border text-text-secondary hover:bg-surface-hover"
-        }`}
-    >
-      {state === "sending" ? "Sending..." : state === "ok" ? "✓ Sent!" : state === "error" ? "✗ Failed" : "🔔 Test Telegram"}
-    </button>
-  );
-}
+// The Telegram test button is gone: Telegram is switched off (see _backend/Code.gs, TELEGRAM_ENABLED).
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>("colors");
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6 border border-border-light bg-surface-card p-4 text-sm text-text-secondary">
-        <p className="mono text-accent mb-2">HOW TO UPDATE THE STORE</p>
-        <ol className="space-y-1 list-decimal list-inside">
-          <li>Change things in the tabs below (they stay in this browser as a draft).</li>
-          <li>On the tab, press <b>Export</b> and save the file over the one in <code>src\data</code> that the button names.</li>
-          <li>Double-click <b>publish.bat</b> in the project folder. It checks the build, then publishes.</li>
-          <li>Wait about 90 seconds and look at the live store.</li>
-        </ol>
-        <p className="mt-2 text-xs text-text-muted">This admin only runs on this computer (admin-local.bat). It is not part of the public site.</p>
-      </div>
+      <StudioBar />
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -68,7 +34,7 @@ export function AdminPage() {
           </div>
           <div className="flex gap-2 shrink-0 flex-wrap justify-end">
             <a
-              href="http://localhost:5173"
+              href={`${window.location.origin}/`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs px-3 py-1.5 rounded-lg border border-border bg-surface-elevated
@@ -97,14 +63,13 @@ export function AdminPage() {
             >
               📋 Test CSV
             </button>
-            <TelegramTestButton />
           </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
-        {(["colors", "products", "templates", "shipping", "configurators", "storemode"] as Tab[]).map((t) => (
+        {(["colors", "products", "templates", "fm1themes", "shipping", "configurators", "storemode"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -116,7 +81,8 @@ export function AdminPage() {
           >
             {t === "colors" ? "Filament Colors"
               : t === "products" ? "Products"
-              : t === "templates" ? "Templates"
+              : t === "templates" ? "Pocket Operator Themes"
+              : t === "fm1themes" ? "FM1 Themes"
               : t === "shipping" ? "Shipping"
               : t === "configurators" ? "Configurators"
               : "Store Mode"}
@@ -127,6 +93,7 @@ export function AdminPage() {
       {tab === "colors" && <ColorsAdmin />}
       {tab === "products" && <ProductsAdmin />}
       {tab === "templates" && <TemplatesAdmin />}
+      {tab === "fm1themes" && <Fm1ThemesAdmin />}
       {tab === "shipping" && <ShippingAdmin />}
       {tab === "configurators" && <ConfiguratorsAdmin />}
       {tab === "storemode" && <StoreModeAdmin />}
