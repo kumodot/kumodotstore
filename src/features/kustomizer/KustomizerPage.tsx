@@ -146,7 +146,7 @@ export function KustomizerPage() {
 
   if (kit.kind !== "grid") {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl 2xl:max-w-[1560px] mx-auto px-4 py-8">
         <div className="text-center mb-4">
           <GlitchTitle as="h1" className="ks text-3xl text-text-primary" text="KUSTOMIZER" />
           <p className="text-sm text-text-secondary mt-1">{kit.tagline}</p>

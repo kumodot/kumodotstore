@@ -44,6 +44,7 @@ export class Fm1Scene {
   private logoTex = new Map<string, THREE.CanvasTexture>();
   private logoQuad: THREE.Mesh | null = null;
   private deviceShadow: THREE.Mesh | null = null;   // soft fake shadow under the device
+  private contactShadows: THREE.Mesh[] = [];          // a soft dark spot on the plate under each knob
   private overlay!: SVGSVGElement;
   private brSel!: { halo: SVGPathElement; light: SVGPathElement };     // the part being edited
   private brHover!: { halo: SVGPathElement; light: SVGPathElement };   // the part under the mouse (2D or 3D)
@@ -158,11 +159,39 @@ export class Fm1Scene {
       const c = b.getCenter(new THREE.Vector3());
       knobs[s] = { x: c.x, z: c.z };
     }
+    this.addContactShadows(knobs);
     this.layout = {
       plate: { minX: fp.min.x, maxX: fp.max.x, minZ: fp.min.z, maxZ: fp.max.z },
       knobs,
     };
     return this.layout;
+  }
+
+  /** A soft dark spot on the plate around the base of every knob (a fake contact shadow: one textured plane per knob,
+   *  nearly free, on for every device). It sits on the plate, under the knob, and is never picked. */
+  private addContactShadows(knobs: SceneLayout["knobs"]) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const x = c.getContext("2d")!;
+    const g = x.createRadialGradient(64, 64, 6, 64, 64, 62);
+    g.addColorStop(0, "rgba(0,0,0,0.85)");
+    g.addColorStop(0.45, "rgba(0,0,0,0.45)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = g;
+    x.fillRect(0, 0, 128, 128);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const geo = new THREE.PlaneGeometry(1, 1);
+    for (const s of SLOTS) {
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.5, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -1 });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.scale.set(0.02, 0.02, 1);                    // about 2 cm: a little wider than the biggest knob
+      m.position.set(knobs[s].x, 0.0006, knobs[s].z);
+      m.renderOrder = 1;
+      this.scene.add(m);
+      this.contactShadows.push(m);
+    }
   }
 
   /** A soft blurred dark square under the device (a fake shadow, one textured plane): it lifts the device, and the color of
@@ -244,7 +273,20 @@ export class Fm1Scene {
     const seeThrough = (n: string, id: string) => {            // translucent filament: the material lets light and what is behind through
       const m = this.mats[n]; if (!m) return;
       const t = this.colorOf.translucent(id);
-      m.transparent = t; m.opacity = t ? 0.55 : 1; m.depthWrite = !t; m.needsUpdate = true;
+      if (t && !m.userData.falloff) {
+        // a little falloff, like real translucent plastic: clearer where you look straight through it, denser at the edges
+        m.userData.falloff = true;
+        m.onBeforeCompile = (shader) => {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <normal_fragment_maps>",
+            "#include <normal_fragment_maps>\n  float fres = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));\n  diffuseColor.a *= mix(0.45, 1.6, pow(fres, 1.4));",
+          );
+        };
+        m.customProgramCacheKey = () => "fm1-falloff";
+        m.needsUpdate = true;
+      }
+      if (m.transparent !== t) m.needsUpdate = true;
+      m.transparent = t; m.opacity = t ? 0.69 : 1; m.depthWrite = !t;   // 15% more opaque than before (0.6)
     };
     // v0.5 GLB: faceplate_side wraps the sides, so the factory body color only shows through the holes.
     set("mat_fm1_device_body", f.body);
@@ -264,7 +306,8 @@ export class Fm1Scene {
       seeThrough(`mat_knob_${s}_cap`, b.knobs[s].cap);
     }
     const caseMode = b.mode === "case";
-    if (this.deviceShadow) this.deviceShadow.visible = caseMode;   // knobs-only: the device is a see-through shell, no shadow
+    if (this.deviceShadow) this.deviceShadow.visible = caseMode;
+    for (const cs of this.contactShadows) cs.visible = caseMode;   // knobs-only: the device is a see-through shell, no shadow
     // Knobs-only: the device turns into a translucent x-ray ghost, only the knobs stay opaque
     for (const n of ["mat_fm1_device_body", "mat_fm1_keys", "mat_fm1_screen"]) {
       const m = this.mats[n];
