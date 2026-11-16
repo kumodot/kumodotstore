@@ -1,3 +1,4 @@
+import { swatchStyle } from "@/utils/swatch.ts";
 import { useState } from "react";
 import { COLOR_LIMITS } from "@/data/colorAvailability.ts";
 import type { FilamentColor } from "@/types/index.ts";
@@ -78,7 +79,7 @@ export function ColorLimitsAdmin({ colors }: { colors: FilamentColor[] }) {
               <tr key={c.id} className="border-b border-border">
                 <td className="py-2 px-2">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 border border-border shrink-0" style={{ backgroundColor: c.hex }} />
+                    <span className="w-6 h-6 border border-border shrink-0" style={swatchStyle(c)} />
                     <span className="font-mono text-xs text-accent w-7">{c.id}</span>
                     <span className="text-sm text-text-primary">{c.name}</span>
                   </div>

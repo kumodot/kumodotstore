@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { SLOTS, type Fm1Build, type Slot } from "./fm1Code.ts";
+import { bezelId, NO_BEZEL, SLOTS, type Fm1Build, type Slot } from "./fm1Code.ts";
 import { logoColor } from "./fm1Color.ts";
 import { loadLogo, logoCanvas } from "./fm1Logo.ts";
 import { firmwareById } from "../../data/firmwares.ts";
@@ -21,7 +21,7 @@ export interface SceneLayout {
 }
 export interface Factory { body: string; keys: string }
 
-const KNOB_RE = /^knob_(\w+?)_(classic|groove)_(short|long)_(body|cap)(?:_(slot|pointer|drop))?$/;
+const KNOB_RE = /^knob_(\w+?)_(classic|groove)_(short|long)_(body|cap|inner)(?:_(slot|pointer|drop))?$/;   // inner = the black core seen through translucent knobs
 const HOME = { pos: new THREE.Vector3(0, 0.15, 0.19), target: new THREE.Vector3(0, 0, 0) };
 
 export class Fm1Scene {
@@ -43,6 +43,7 @@ export class Fm1Scene {
   private applied: { b: Fm1Build; f: Factory } | null = null;   // to redraw when a logo finishes loading
   private logoTex = new Map<string, THREE.CanvasTexture>();
   private logoQuad: THREE.Mesh | null = null;
+  private deviceShadow: THREE.Mesh | null = null;   // soft fake shadow under the device
   private overlay!: SVGSVGElement;
   private brSel!: { halo: SVGPathElement; light: SVGPathElement };     // the part being edited
   private brHover!: { halo: SVGPathElement; light: SVGPathElement };   // the part under the mouse (2D or 3D)
@@ -148,6 +149,7 @@ export class Fm1Scene {
     }
     const box = (name: string) =>
       new THREE.Box3().setFromObject(this.meshes.find((m) => m.name === name)!);
+    this.addDeviceShadow();
     const fp = box("faceplate_body");
     const knobs = {} as SceneLayout["knobs"];
     for (const s of SLOTS) {
@@ -161,6 +163,36 @@ export class Fm1Scene {
       knobs,
     };
     return this.layout;
+  }
+
+  /** A soft blurred dark square under the device (a fake shadow, one textured plane): it lifts the device, and the color of
+   *  its sides, off the dark background. Costs nothing, so it is on for every device. */
+  private addDeviceShadow() {
+    const body = this.meshes.find((m) => m.name === "faceplate_side") ?? this.meshes.find((m) => m.name === "faceplate_body");
+    if (!body) return;
+    const box = new THREE.Box3().setFromObject(body);
+    const size = box.getSize(new THREE.Vector3());
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const x = c.getContext("2d")!;
+    // the blur comes from shadowBlur (works in every browser, unlike ctx.filter); the rectangle is drawn off screen
+    x.shadowColor = "rgba(0,0,0,1)";
+    x.shadowBlur = 34;
+    x.shadowOffsetX = 1000;
+    x.fillStyle = "#000";
+    const inner = 256 * 0.56;                       // the plate itself takes 56% of the texture, the rest is the soft edge
+    x.fillRect((256 - inner) / 2 - 1000, (256 - inner) / 2, inner, inner);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+    m.rotation.x = -Math.PI / 2;
+    const k = 1 / 0.56;                              // so the plate's footprint lands on the 56% core
+    m.scale.set(size.x * k * 1.04, size.z * k * 1.04, 1);
+    m.position.set((box.min.x + box.max.x) / 2, box.min.y - 0.0004, (box.min.z + box.max.z) / 2 + size.z * 0.015);
+    m.renderOrder = -1;
+    this.scene.add(m);
+    this.deviceShadow = m;
   }
 
   /** Optional test file: parts with the name of a base part replace it (the base material stays, so color still works),
@@ -200,10 +232,20 @@ export class Fm1Scene {
     this.applied = { b, f };
     const set = (n: string, hex: string) => {
       if (!this.mats[n]) return;
-      this.base[n] = new THREE.Color(hex);
+      // a pure white base color blows out under the key light and the part loses all its volume: very bright colors are
+      // scaled down to a soft white (hue kept), so the shading still shows
+      const c = new THREE.Color(hex);
+      const peak = Math.max(c.r, c.g, c.b);
+      if (peak > 0.68) c.multiplyScalar(0.68 / peak);
+      this.base[n] = c;
       this.mats[n].color.copy(this.base[n]);
     };
     const { hex } = this.colorOf;
+    const seeThrough = (n: string, id: string) => {            // translucent filament: the material lets light and what is behind through
+      const m = this.mats[n]; if (!m) return;
+      const t = this.colorOf.translucent(id);
+      m.transparent = t; m.opacity = t ? 0.55 : 1; m.depthWrite = !t; m.needsUpdate = true;
+    };
     // v0.5 GLB: faceplate_side wraps the sides, so the factory body color only shows through the holes.
     set("mat_fm1_device_body", f.body);
     set("mat_fm1_keys", f.keys);
@@ -211,15 +253,18 @@ export class Fm1Scene {
     set("mat_faceplate_side", hex(b.side ?? b.body));
     set("mat_faceplate_accent", hex(b.accent));
     set("mat_faceplate_accent_labels", hex(b.accent));   // the label shapes of the studio model follow the accent too
-    set("mat_bezel_simple", hex(b.bezel ?? b.accent));
-    set("mat_bezel_ext", hex(b.bezel ?? b.accent));
-    set("mat_bezel_jiant", hex(b.bezel ?? b.accent));
-    set("mat_bezel_logo", b.logo ? hex(b.logo) : logoColor(hex(b.accent), hex(b.bezel ?? b.accent)));   // chosen, else auto
+    set("mat_bezel_simple", hex(bezelId(b)));
+    set("mat_bezel_ext", hex(bezelId(b)));
+    set("mat_bezel_jiant", hex(bezelId(b)));
+    set("mat_bezel_logo", b.logo ? hex(b.logo) : logoColor(hex(b.accent), hex(bezelId(b))));   // chosen, else auto
     for (const s of SLOTS) {
       set(`mat_knob_${s}_body`, hex(b.knobs[s].body));
       set(`mat_knob_${s}_cap`, hex(b.knobs[s].cap));
+      seeThrough(`mat_knob_${s}_body`, b.knobs[s].body);
+      seeThrough(`mat_knob_${s}_cap`, b.knobs[s].cap);
     }
     const caseMode = b.mode === "case";
+    if (this.deviceShadow) this.deviceShadow.visible = caseMode;   // knobs-only: the device is a see-through shell, no shadow
     // Knobs-only: the device turns into a translucent x-ray ghost, only the knobs stay opaque
     for (const n of ["mat_fm1_device_body", "mat_fm1_keys", "mat_fm1_screen"]) {
       const m = this.mats[n];
@@ -238,7 +283,8 @@ export class Fm1Scene {
     const fw = b.badge ? firmwareById(b.badge) : undefined;
     const has = (n: string) => this.meshes.some((m) => m.name === n);
     const bezelType = fw?.bezel === "jiant" && has("bezel_jiant") ? "jiant" : "ext";
-    const plateName = b.badge === null || !fw?.logo ? null   // BLANK: no plate at all
+    const noBezel = b.bezel === NO_BEZEL;     // the buyer deleted the bezel
+    const plateName = b.badge === null || !fw?.logo || noBezel ? null   // BLANK: no plate at all
       : [`bezel_logo_${b.badge}`, `bezel_logo_${bezelType}`, "bezel_logo_blank", "bezel_logo_ext"].find(has) ?? null;
     for (const m of this.meshes) {
       const n = m.name;
@@ -248,6 +294,7 @@ export class Fm1Scene {
       else if (n === "bezel_ext") vis = b.badge !== null && bezelType !== "jiant";
       else if (n === "bezel_jiant") vis = b.badge !== null && bezelType === "jiant";
       else if (n.startsWith("bezel_logo_")) vis = n === plateName;
+      if (noBezel && n.startsWith("bezel_")) vis = false;
       if (!caseMode && !n.startsWith("knob_") && !["fm1_device_body", "fm1_keys", "fm1_screen"].includes(n)) vis = false;
       const k = KNOB_RE.exec(n);
       if (k) {
@@ -289,7 +336,7 @@ export class Fm1Scene {
       const sc = firmwareById(b.badge ?? "")?.scale ?? 1;
       q.scale.set(size.x * sc, size.z * sc, 1);
       q.position.set(c.x, bb.max.y + 0.00006, c.z);
-      const color = b.logo ? this.colorOf.hex(b.logo) : logoColor(this.colorOf.hex(b.accent), this.colorOf.hex(b.bezel ?? b.accent));
+      const color = b.logo ? this.colorOf.hex(b.logo) : logoColor(this.colorOf.hex(b.accent), this.colorOf.hex(bezelId(b)));
       const key = `${file}|${color}`;
       let tex = this.logoTex.get(key);
       if (!tex) {
@@ -306,7 +353,7 @@ export class Fm1Scene {
     });
   }
   /** set by the React side: filament id -> hex */
-  colorOf = { hex: (id: string): string => id };
+  colorOf = { hex: (id: string): string => id, translucent: (_id: string): boolean => false };
 
   /** Bracket the part being edited (by material names). Pass [] to hide. */
   highlight(names: string[]) {
@@ -442,7 +489,7 @@ export class Fm1Scene {
       ray.setFromCamera(ndc, this.camera);
       const n = ray.intersectObjects(this.meshes.filter((m) => m.visible), false)[0]?.object.name ?? "";
       const k = KNOB_RE.exec(n);
-      if (k) return { k: "knob", slot: k[1] as Slot, part: k[4] as "body" | "cap" };
+      if (k) return { k: "knob", slot: k[1] as Slot, part: k[4] === "cap" ? "cap" : "body" };
       if (n === "faceplate_body") return { k: "fp", part: "body" };
       if (n === "faceplate_side") return { k: "fp", part: "side" };
       if (n === "faceplate_accent" || n === "faceplate_accent_labels") return { k: "fp", part: "accent" };

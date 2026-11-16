@@ -15,7 +15,7 @@ import { SaveThemeModal } from "@/components/ui/SaveThemeModal.tsx";
 import { ConfirmModal } from "@/components/ui/ConfirmModal.tsx";
 import { KUSTOMIZER_PRODUCTS } from "@/data/kustomizerProducts.ts";
 import {
-  decodeFm1, encodeFm1, FIRMWARES, GROUPS, SLOTS, SLOT_NAME, variantOk,
+  bezelId, decodeFm1, encodeFm1, FIRMWARES, GROUPS, NO_BEZEL, SLOTS, SLOT_NAME, variantOk,
   type Fm1Build, type Knob, type Slot,
 } from "./fm1Code.ts";
 import { ThemeFilmstrip } from "@/components/ui/ThemeFilmstrip.tsx";
@@ -47,7 +47,7 @@ const fpMats = (p: FpPartName, sideFollows: boolean) =>
 /** Features that are off are fixed in the build, so nothing hidden can reach the code. */
 const norm = (b: Fm1Build): Fm1Build => {
   if (!FM1_FEATURES.sides) b.side = null;
-  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; b.bezel = null; }
+  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; if (b.bezel !== NO_BEZEL) b.bezel = null; }   // a deleted bezel stays deleted
   return b;
 };
 
@@ -56,6 +56,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const allColors = colorsStore.getColors();
   const colors = offeredColors("fm1-kz", allColors);   // what the tray offers (see src/data/colorAvailability.ts)
   const hex = (id: string) => allColors.find((c) => c.id === id)?.hex ?? "#888888";   // any color still draws, even if no longer offered
+  const isT = (id: string) => !!allColors.find((c) => c.id === id)?.translucent;      // translucent filament: striped swatch, see-through in 3D
 
   const start = (): Fm1Build => ({ ...cloneBuild(FIXED_THEMES[0].build), mode });   // a fixed theme shows everything it has
   const [build, setBuild] = useState<Fm1Build>(start);
@@ -94,7 +95,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   useEffect(() => {
     const s = new Fm1Scene(host.current!);
     scene.current = s;
-    s.colorOf = { hex };
+    s.colorOf = { hex, translucent: isT };
     const fpNames = (part: FpPartName) => fpMats(effPart(part), buildRef.current.side === null);
     s.onPick = (p: ScenePick | null) => {
       if (!p) return clearSel();
@@ -158,7 +159,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
   const edit = (fn: (b: Fm1Build) => void) => {
     const b = cloneBuild(build); fn(b);
-    const dropped = (b.side !== null && !FM1_FEATURES.sides) || ((b.badge !== null || b.logo !== null || b.bezel !== null) && !FM1_FEATURES.badge);
+    const dropped = (b.side !== null && !FM1_FEATURES.sides) || ((b.badge !== null || b.logo !== null || (b.bezel !== null && b.bezel !== NO_BEZEL)) && !FM1_FEATURES.badge);
     norm(b);
     if (dropped) setFlashSoon((n) => n + 1);   // the part the editor does not offer yet is gone: the SOON tags flash
     setBuild(b); setThemeId(""); };
@@ -220,7 +221,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     return ids.every((i) => i === ids[0]) ? ids[0] : null; // null = mixed
   };
   const isTarget = (t: Target) => JSON.stringify(t) === JSON.stringify(target);
-  const curId = target.k === "fp" ? (target.part === "bezel" ? build.bezel ?? build.accent : target.part === "side" ? build.side ?? build.body : target.part === "logo" ? build.logo : build[target.part])
+  const curId = target.k === "fp" ? (target.part === "bezel" ? bezelId(build) : target.part === "side" ? build.side ?? build.body : target.part === "logo" ? build.logo : build[target.part])
     : target.k === "group" ? groupVal(target.g, target.part)
     : build.knobs[target.slot][target.part];
 
@@ -229,7 +230,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const waitBlurb = `The FM1_Kz cases and knobs are almost here. Join the list and get ${SITE.waitlist.discountPercent}% off at launch, we will email you when the listing goes live.`;
 
   // the current build carries parts the public editor does not offer (a fixed theme with sides or a firmware badge)
-  const hasExclusive = (build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null || build.bezel !== null) && !FM1_FEATURES.badge);
+  const hasExclusive = (build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null || (build.bezel !== null && build.bezel !== NO_BEZEL)) && !FM1_FEATURES.badge);
 
   const codePanel = (
     <>
@@ -277,7 +278,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             ...(isDraft && !editingSaved ? [{ id: "__draft", name: "Not saved", build }] : []),
           ].map((t) => ({
             id: t.id, name: t.name, draft: t.id === "__draft" || t.id === editingSaved, removable: t.id !== "__draft" && t.id !== editingSaved && !FIXED_THEMES.some((f) => f.id === t.id),
-            thumb: <Fm1Thumb build={FIXED_THEMES.some((f) => f.id === t.id) ? { ...t.build, mode } : norm({ ...cloneBuild(t.build), mode })} hex={hex} factory={fac} />,
+            thumb: <Fm1Thumb tr={isT} build={FIXED_THEMES.some((f) => f.id === t.id) ? { ...t.build, mode } : norm({ ...cloneBuild(t.build), mode })} hex={hex} factory={fac} />,
           }))}
           onRemove={(id) => { const list = saved.filter((x) => x.id !== id); setSaved(list); storeSaved(list); }}
           activeId={isDraft ? editingSaved ?? "__draft" : themeId || null}
@@ -292,7 +293,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       </div>
 
       {hasExclusive && (
-        <p className="mb-4 -mt-2 border-l-2 border-accent pl-3 text-[11px] text-text-secondary">
+        <p className="mb-4 -mt-2 border-l-2 border-accent pl-3 text-xs font-medium text-accent">
           This theme includes exclusive parts that are not open for customization yet. You can order it as it is; changing anything removes them.
         </p>
       )}
@@ -307,7 +308,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               <span className="ks block text-xl leading-none text-white">{partLabel}</span>
             </div>
             {radial && (
-        <RadialColorMenu colors={colors} currentId={curId} title={targetLabel.replace(/^KNOBS? /, "").replace(" · ", " ")}
+        <RadialColorMenu colors={target.k === "fp" ? colors.filter((c) => !c.knobsOnly) : colors} currentId={curId} title={targetLabel.replace(/^KNOBS? /, "").replace(" · ", " ")}
           onPick={(id) => setColor(id)} onPreview={setPreview} onClose={() => { setPreview(null); setRadial(false); }}>
           {mode === "case" && target.k === "fp" && target.part === "side" && build.side !== null && (
             <button onClick={() => edit((b) => { b.side = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow faceplate</button>
@@ -315,7 +316,12 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           {mode === "case" && target.k === "fp" && target.part === "logo" && build.logo !== null && (
             <button onClick={() => edit((b) => { b.logo = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Auto (black or white)</button>
           )}
-          {mode === "case" && target.k === "fp" && target.part === "bezel" && build.bezel !== null && (
+          {mode === "case" && target.k === "fp" && (target.part === "accent" || target.part === "bezel") && (
+            <button onClick={() => edit((b) => { b.bezel = b.bezel === NO_BEZEL ? null : NO_BEZEL; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">
+              {build.bezel === NO_BEZEL ? "Restore bezel" : "Delete bezel"}
+            </button>
+          )}
+          {mode === "case" && target.k === "fp" && target.part === "bezel" && build.bezel !== null && build.bezel !== NO_BEZEL && (
             <button onClick={() => edit((b) => { b.bezel = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow labels</button>
           )}
           {target.k === "knob" && selKnob && (
@@ -335,7 +341,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             {/* high quality picture of the selected knob, over the 3D view (only when renders exist, see public/renders/README.md) */}
             {sel && selKnob && (
               <div className="pointer-events-none absolute left-2 bottom-2 w-[42%] max-w-72">
-                <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} size={256} fluid />
+                <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={256} fluid />
               </div>
             )}
           </div>
@@ -367,7 +373,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                       <button key={label} onClick={() => setVariant(selKnob, { style: st, height: h })}
                         onPointerEnter={() => setPeek(`${st}_${h}`)} onPointerLeave={() => setPeek(null)}
                         className={`w-[72px] sm:w-[88px] aspect-square text-xs border cursor-pointer flex flex-col items-center justify-center gap-1 ${sel.style === st && sel.height === h ? "border-accent text-accent" : "border-border text-text-muted"}`}>
-                        <KnobRender style={st} height={h} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} size={60} />
+                        <KnobRender style={st} height={h} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={60} />
                         {label}
                       </button>
                     ))}
@@ -443,6 +449,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           <section className="bg-surface-card border border-border p-2 lg:w-4/5 lg:mr-auto" data-keep-radial>
             <Fm1TopView
               build={shown}
+              tr={isT}
               hex={hex}
               factory={fac}
               ix={{

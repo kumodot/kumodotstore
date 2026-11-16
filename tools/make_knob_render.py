@@ -7,6 +7,7 @@ Files in the folder (all PNG, 1024 x 1024, transparent, same camera and framing,
   cap_short.png, cap_long.png   the cap of the plain knobs, one per height (used by every style of that height)
   vol_cap.png                   the cap of the volume knob (or vol_cap_short.png / vol_cap_long.png if it differs per height)
   <style>_<height>_body.png     body of the 7 plain knobs of that set, e.g. groove_long_body.png
+  <style>_<height>_inner.png    optional: the black core of that set, drawn under the body (seen through translucent colors)
   <style>_<height>_cap.png      only if that set needs its own cap picture (a taller body puts the cap higher), e.g. classic_long_cap.png
   vol_<style>_<height>_body.png body of the volume knob (the 8th, different one) of that set
 Each layer's own alpha is its mask: nothing is guessed, moved or cropped, only scaled down.
@@ -40,6 +41,9 @@ for b in sorted(glob.glob(os.path.join(a.folder, "*_body.png"))):
     key = os.path.basename(b)[: -len("_body.png")]
     save(b, f"knob_{key}_body.webp")
     manifest["knobs"][key] = {"body": f"knob_{key}_body.webp"}
+    if os.path.exists(P(f"{key}_inner")):   # black core under the body
+        save(P(f"{key}_inner"), f"knob_{key}_inner.webp")
+        manifest["knobs"][key]["inner"] = f"knob_{key}_inner.webp"
     if os.path.exists(P(f"{key}_cap")):   # own cap picture for this set
         save(P(f"{key}_cap"), f"knob_{key}_cap.webp")
         manifest["knobs"][key]["cap"] = f"knob_{key}_cap.webp"

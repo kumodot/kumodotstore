@@ -7,7 +7,7 @@
 export type BezelType = "ext" | "jiant";
 
 export const FIRMWARE_LIST = [
-  { id: "sloop", code: "SL", name: "SLOOP", logo: "logo_sloop.svg", bezel: "ext", scale: 1.2 },
+  { id: "sloop", code: "SL", name: "SLOOP", logo: "logo_sloop.svg", bezel: "ext", scale: 1.08 },
   { id: "jiant", code: "JI", name: "JIANT", logo: "logo_jiant.svg", bezel: "jiant", scale: 1.35 },
   { id: "shrub", code: "SH", name: "SHRUB", logo: "logo_shrub.svg", bezel: "ext", scale: 0.8 },
   { id: "baudgirl", code: "BG", name: "BaudGirl", logo: "logo_baudgirl.svg", bezel: "ext", scale: 1 },

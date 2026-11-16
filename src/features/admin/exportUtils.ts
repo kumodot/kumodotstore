@@ -78,7 +78,8 @@ export async function exportColorsTs(colors: FilamentColor[]): Promise<void> {
   const lines = colors.map((c) => {
     const [r, g, b] = c.rgb;
     const avail = c.available ? "true" : "false";
-    return `  { id: "${c.id}", name: "${c.name}", rgb: [${r}, ${g}, ${b}], hex: "${c.hex}", available: ${avail} },`;
+    const extra = (c.translucent ? ", translucent: true" : "") + (c.knobsOnly ? ", knobsOnly: true" : "");
+    return `  { id: "${c.id}", name: "${c.name}", rgb: [${r}, ${g}, ${b}], hex: "${c.hex}", available: ${avail}${extra} },`;
   });
 
   const content = `import type { FilamentColor } from "@/types/index.ts";

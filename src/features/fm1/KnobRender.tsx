@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 // stacked base, body, cap; body and cap are tinted with the buyer's colors (multiply keeps the shading) and each
 // picture's own alpha is its mask. The volume knob is the one different knob of a set: body vol_<style>_<height>.
 // Anything missing for a knob = nothing is drawn.
-interface Manifest { base?: string; caps: Record<string, string>; knobs: Record<string, { body: string; cap?: string }> }
+interface Manifest { base?: string; caps: Record<string, string>; knobs: Record<string, { body: string; cap?: string; inner?: string }> }
 
 const BASE = `${import.meta.env.BASE_URL}renders/`;
 let manifest: Promise<Manifest> | null = null;
@@ -41,7 +41,7 @@ function lifted(hex: string) {
 }
 
 /** The render multiplied by a color, kept inside its own alpha. */
-function tinted(img: HTMLImageElement, color: string, W: number, H: number) {
+function tinted(img: HTMLImageElement, color: string, W: number, H: number, alpha = 1) {
   const c = document.createElement("canvas");
   c.width = W;
   c.height = H;
@@ -52,15 +52,18 @@ function tinted(img: HTMLImageElement, color: string, W: number, H: number) {
   x.fillRect(0, 0, W, H);
   x.globalCompositeOperation = "destination-in";
   x.drawImage(img, 0, 0, W, H);
+  if (alpha < 1) { x.globalCompositeOperation = "source-over"; x.globalAlpha = 1; }
   return c;
 }
 
-export function KnobRender({ style, height, slot, body, cap, size = 120, fluid = false, className = "" }: {
+export function KnobRender({ style, height, slot, body, cap, bodyT = false, capT = false, size = 120, fluid = false, className = "" }: {
   slot?: string;   // knob slot, only used to find a volume-knob specific render
   style: string;
   height: string;
   body: string;   // hex
   cap: string;    // hex
+  bodyT?: boolean;   // the body / cap color is translucent: drawn with transparency
+  capT?: boolean;
   size?: number;
   fluid?: boolean;   // fill the parent width (size only sets the canvas resolution)
   className?: string;
@@ -77,7 +80,8 @@ export function KnobRender({ style, height, slot, body, cap, size = 120, fluid =
       const own = m.knobs[`${vol ? "vol_" : ""}${style}_${height}`]?.cap;   // a set can bring its own cap picture
       const cap_ = own ?? (vol ? (m.caps[`vol_${height}`] ?? m.caps.vol) : m.caps[height]);
       if (!body_ || !cap_) { if (!dead) setMissing(true); return; }
-      const [b, c, base] = await Promise.all([loadImg(body_), loadImg(cap_), m.base ? loadImg(m.base) : Promise.resolve(null)]);
+      const innerFile = m.knobs[`${vol ? "vol_" : ""}${style}_${height}`]?.inner;   // the black core: seen through translucent colors
+      const [b, c, base, inner] = await Promise.all([loadImg(body_), loadImg(cap_), m.base ? loadImg(m.base) : Promise.resolve(null), innerFile ? loadImg(innerFile) : Promise.resolve(null)]);
       if (dead || !ref.current) return;
       setMissing(false);
       const canvas = ref.current;
@@ -85,11 +89,15 @@ export function KnobRender({ style, height, slot, body, cap, size = 120, fluid =
       const ctx = canvas.getContext("2d")!;
       ctx.clearRect(0, 0, W, H);
       if (base) ctx.drawImage(base, 0, 0, W, H);
+      if (inner) ctx.drawImage(tinted(inner, "#000000", W, H), 0, 0);
+      ctx.globalAlpha = bodyT ? 0.6 : 1;
       ctx.drawImage(tinted(b, body, W, H), 0, 0);
+      ctx.globalAlpha = capT ? 0.6 : 1;
       ctx.drawImage(tinted(c, cap, W, H), 0, 0);
+      ctx.globalAlpha = 1;
     })().catch(() => { if (!dead) setMissing(true); });
     return () => { dead = true; };
-  }, [style, height, slot, body, cap]);
+  }, [style, height, slot, body, cap, bodyT, capT]);
 
   // always rendered (hidden when there is no picture): the effect needs the canvas to draw the next variant
   return <canvas ref={ref} hidden={missing} width={size * 2} height={size * 2} style={fluid ? { width: "100%", height: "auto" } : { width: size, height: size }} className={className} aria-label="Knob preview" />;

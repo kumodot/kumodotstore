@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { swatchStyle } from "@/utils/swatch.ts";
 
 // Color menu docked in the bottom-right corner of the 3D view: always the same place, never over the part being
 // edited. The swatches sit on a ring (a second ring only if one does not fit), tap one to apply it, the menu stays
@@ -20,7 +21,7 @@ export function ringLayout(n: number, sw: number, gap: number): { r: number; a: 
 }
 
 export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, onClose, children }: {
-  colors: { id: string; name: string; hex: string }[];
+  colors: { id: string; name: string; hex: string; translucent?: boolean }[];
   currentId: string | null;
   title: string;
   onPick: (id: string) => void;
@@ -92,7 +93,7 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
               onClick={() => onPick(c.id)}
               className={`absolute pointer-events-auto rounded-full border-2 cursor-pointer ${currentId === c.id ? "border-accent" : "border-[#6b6a66]"}`}
               style={{
-                width: SW, height: SW, background: c.hex,
+                width: SW, height: SW, ...swatchStyle(c),
                 left: out ? Math.cos(s.a) * s.r : 0, top: out ? Math.sin(s.a) * s.r : 0,
                 opacity: out ? 1 : 0, transform: `translate(-50%, -50%) scale(${out ? 1 : 0.4})`,
                 transition: `left 130ms cubic-bezier(.2,.9,.3,1.25) ${i * 8}ms, top 130ms cubic-bezier(.2,.9,.3,1.25) ${i * 8}ms, opacity 90ms ${i * 8}ms, transform 130ms ${i * 8}ms`,

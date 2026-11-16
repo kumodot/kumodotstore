@@ -9,7 +9,7 @@
 // "pokz" (Pocket Operator cases). Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue,
 // PU Purple, LG Light Gray, MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
 export const COLOR_LIMITS: Record<string, string[] | undefined> = {
-  "fm1-kz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "DG", "WH", "BK"],
+  "fm1-kz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "DG", "WH", "BK", "TW", "TO"],
   "pokz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "MG", "DG", "WH", "BK"],
 };
 

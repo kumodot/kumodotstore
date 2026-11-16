@@ -1,8 +1,9 @@
 import { useId, type ReactNode } from "react";
-import { GROUPS, SLOT_LABEL, type Fm1Build, type Slot } from "./fm1Code.ts";
+import { bezelId, GROUPS, NO_BEZEL, SLOT_LABEL, type Fm1Build, type Slot } from "./fm1Code.ts";
 import { FM1_TOP } from "./fm1TopShapes.ts";
 import { logoColor } from "./fm1Color.ts";
 import { fitLogo, useLogo } from "./fm1Logo.ts";
+import { JIANT_BEZEL } from "./jiantBezel.ts";
 import { firmwareById } from "../../data/firmwares.ts";
 
 // Top view of the FM1 built from the vectorized reference (fm1TopShapes.ts). One component draws both
@@ -44,10 +45,13 @@ const rrect = (x: number, y: number, w: number, h: number, r: number) =>
 const SCREEN_BOX = bbox(FM1_TOP.screen);
 const LOGO_TOP = SCREEN_BOX.y + SCREEN_BOX.h + 4;
 /** The badge bezel and its logo area. `grow` stretches the strip down over the keys (JIANT's own bezel is taller). */
-const stripGeom = (grow: number) => {
+const JIANT_BOX = bbox(JIANT_BEZEL.outer);
+const stripGeom = (grow: number, jiant = false) => {
+  if (jiant) return { extra: JIANT_BOX.y + JIANT_BOX.h - (BEZEL_BOX.y + BEZEL_BOX.h), outer: JIANT_BEZEL.outer, logo: JIANT_BEZEL.logo, box: JIANT_BOX };   // JIANT: its own bezel outline (from the studio model)
   const extra = BADGE_EXTRA + grow;
   return {
     extra,
+    box: { ...BEZEL_BOX, h: BEZEL_BOX.h + extra },
     outer: rrect(BEZEL_BOX.x, BEZEL_BOX.y, BEZEL_BOX.w, BEZEL_BOX.h + extra, 46),
     logo: { x: SCREEN_BOX.x, y: LOGO_TOP, w: SCREEN_BOX.w, h: BEZEL_BOX.y + BEZEL_BOX.h + extra - 14 - LOGO_TOP },
   };
@@ -72,42 +76,48 @@ const lum = (h: string) => {
   return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 };
 
-export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full" }: {
+export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-full" }: {
   build: Fm1Build;
   hex: (id: string) => string;
+  tr?: (id: string) => boolean;   // translucent colors: the knob is drawn faded with diagonal stripes
   factory: { body: string; keys: string };
   ix?: TopViewInteraction;
   className?: string;
 }): ReactNode {
   const hatch = useId();
+  const stripes = useId();
   const { w, h, outline, keys, bezelOuter, screen, holes } = FM1_TOP;
   const plate = build.mode === "case";
   const slots = Object.keys(holes) as Slot[];
   const pad = 40;
   const hoverable = ix ? "cursor-pointer" : "";
 
-  const badge = plate && build.badge !== null;
+  const noBezel = build.bezel === NO_BEZEL;           // deleted: only the screen window is left
+  const badge = plate && build.badge !== null && !noBezel;
   const fw = build.badge ? firmwareById(build.badge) : undefined;
-  const G = stripGeom(fw?.bezel === "jiant" ? 30 : 0);
+  const G = stripGeom(0, fw?.bezel === "jiant");
   const showLogo = badge && !!fw?.logo;   // BLANK: nothing at all on the strip
   const logo = useLogo(badge ? fw?.logo ?? null : null);
   const maskId = useId();
   // the logo area, scaled around its center by the firmware's `scale` (the mask grows with it so nothing is cut)
-  const sc = fw?.scale ?? 1;
+  const sc = fw?.bezel === "jiant" ? 1 : fw?.scale ?? 1;   // JIANT's logo area is the real logo of the model
   const LA = { x: G.logo.x + G.logo.w * (1 - sc) / 2, y: G.logo.y + G.logo.h * (1 - sc) / 2, w: G.logo.w * sc, h: G.logo.h * sc };
   const fit = logo ? fitLogo(logo, LA.x, LA.y, LA.w, LA.h) : null;
-  const logoFill = build.logo ? hex(build.logo) : logoColor(hex(build.accent), hex(build.bezel ?? build.accent));
+  const logoFill = build.logo ? hex(build.logo) : logoColor(hex(build.accent), hex(bezelId(build)));
   const outerBezel = badge ? G.outer : bezelOuter;
-  const bezelBox = badge ? { ...BEZEL_BOX, h: BEZEL_BOX.h + G.extra } : BEZEL_BOX;
-  const plateD = [outline, ...slots.map((s) => circle(holes[s].cx, holes[s].cy, holes[s].r)), ...keys, outerBezel].join("");
-  const bezelD = outerBezel + screen;
-  const bezelColor = hex(build.bezel ?? build.accent);
+  const bezelBox = badge ? G.box : BEZEL_BOX;
+  const plateD = [outline, ...slots.map((s) => circle(holes[s].cx, holes[s].cy, holes[s].r)), ...keys, noBezel ? screen : outerBezel].join("");
+  const bezelD = outerBezel + (fw?.bezel === "jiant" && badge ? JIANT_BEZEL.hole : screen);   // JIANT: its own wavy window, so the waves stay
+  const bezelColor = hex(bezelId(build));
 
   return (
     <svg viewBox={`${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}`} className={className} role="img" aria-label="FM1 top view">
       <defs>
         <pattern id={hatch} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="7" height="14" fill="#bbb" /><rect x="7" width="7" height="14" fill="#555" />
+        </pattern>
+        <pattern id={stripes} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="5" height="14" fill="#fff" fillOpacity=".55" />
         </pattern>
       </defs>
       <rect x={-pad} y={-pad} width={w + 2 * pad} height={h + 2 * pad} fill="#0D0D0C" />
@@ -134,10 +144,10 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
             onPointerLeave={ix ? () => ix.onHover(null) : undefined}
             style={ix?.hover?.fp && ix.hover.fp !== "bezel" && ix.hover.fp !== "logo" ? { filter: "brightness(1.18)" } : undefined} />
           <path d={outline} fill="none" stroke={hex(build.side ?? build.body)} strokeWidth="10" strokeLinejoin="round" pointerEvents="none" />
-          <path d={bezelD} fillRule="evenodd" fill={bezelColor} className={hoverable} onClick={ix?.onBezel}
+          {!noBezel && <path d={bezelD} fillRule="evenodd" fill={bezelColor} className={hoverable} onClick={ix?.onBezel}
             onPointerEnter={ix ? () => ix.onHover({ fp: "bezel" }) : undefined}
             onPointerLeave={ix ? () => ix.onHover(null) : undefined}
-            style={ix?.hover?.fp === "bezel" ? { filter: "brightness(1.3)" } : undefined} />
+            style={ix?.hover?.fp === "bezel" ? { filter: "brightness(1.3)" } : undefined} />}
           {showLogo && (
             <>
               {/* the firmware logo (its SVG tinted with the logo color); BLANK has none, only the clickable strip */}
@@ -198,8 +208,10 @@ export function Fm1TopView({ build, hex, factory, ix, className = "w-full h-full
           <g key={s} className={hoverable} onPointerLeave={ix ? () => ix.onHover(null) : undefined}
             style={ix?.hover?.slot === s ? { filter: "brightness(1.25)" } : undefined}>
             {plate && !ix && <rect x={cx - r * 0.55} y={cy + r + 12} width={r * 1.1} height="9" fill={hex(build.accent)} />}
-            <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} stroke="#0D0D0C" strokeWidth="6" pointerEvents="none" />
-            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} stroke="#0D0D0C" strokeWidth="3" pointerEvents="none" />
+            <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} fillOpacity={tr?.(k.body) ? 0.6 : 1} stroke="#0D0D0C" strokeWidth="6" pointerEvents="none" />
+            {tr?.(k.body) && <circle cx={cx} cy={cy} r={r * 0.9} fill={`url(#${stripes})`} pointerEvents="none" />}
+            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.6 : 1} stroke="#0D0D0C" strokeWidth="3" pointerEvents="none" />
+            {tr?.(k.cap) && <circle cx={cx} cy={cy} r={r * 0.52} fill={`url(#${stripes})`} pointerEvents="none" />}
             {ix && (
               <>
                 {/* two hit areas that never overlap: the body is a ring (donut), the cap is the disc inside it */}

@@ -9,9 +9,10 @@ const BARE: Record<Slot, [number, number]> = {
 };
 
 /** Filmstrip thumbnail: the same top view as the big panel, without interaction. */
-export function Fm1Thumb({ build, hex, factory }: {
+export function Fm1Thumb({ build, hex, tr, factory }: {
   build: Fm1Build;
   hex: (id: string) => string;
+  tr?: (id: string) => boolean;   // translucent colors (knobs are drawn striped and see-through)
   factory: { body: string; keys: string };
 }) {
   if (build.mode === "knobs") {
@@ -23,13 +24,13 @@ export function Fm1Thumb({ build, hex, factory }: {
           const [cx, cy] = BARE[s];
           return (
             <g key={s}>
-              <circle cx={cx} cy={cy} r="80" fill={hex(k.body)} stroke="#3B3A36" strokeWidth="6" />
-              <circle cx={cx} cy={cy} r="44" fill={hex(k.cap)} stroke="#0D0D0C" strokeWidth="4" />
+              <circle cx={cx} cy={cy} r="80" fill={hex(k.body)} fillOpacity={tr?.(k.body) ? 0.55 : 1} stroke="#3B3A36" strokeWidth="6" />
+              <circle cx={cx} cy={cy} r="44" fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.55 : 1} stroke="#0D0D0C" strokeWidth="4" />
             </g>
           );
         })}
       </svg>
     );
   }
-  return <Fm1TopView build={build} hex={hex} factory={factory} />;
+  return <Fm1TopView build={build} hex={hex} tr={tr} factory={factory} />;
 }

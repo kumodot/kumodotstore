@@ -4,12 +4,15 @@ import type { FilamentColor } from "@/types/index.ts";
 import { colorsStore } from "@/data/colorsStore.ts";
 import { exportColorsTs } from "./exportUtils.ts";
 import { ColorLimitsAdmin } from "./ColorLimitsAdmin.tsx";
+import { swatchStyle } from "@/utils/swatch.ts";
 
 interface EditingColor {
   id: string;
   name: string;
   hex: string;
   available: boolean;
+  translucent: boolean;
+  knobsOnly: boolean;
 }
 
 function ColorRow({
@@ -26,7 +29,7 @@ function ColorRow({
   const [editing, setEditing] = useState<EditingColor | null>(null);
 
   const startEdit = () =>
-    setEditing({ id: color.id, name: color.name, hex: color.hex, available: color.available });
+    setEditing({ id: color.id, name: color.name, hex: color.hex, available: color.available, translucent: !!color.translucent, knobsOnly: !!color.knobsOnly });
 
   const cancelEdit = () => setEditing(null);
 
@@ -36,6 +39,8 @@ function ColorRow({
       name: editing.name,
       hex: editing.hex,
       rgb: colorsStore.hexToRgb(editing.hex),
+      translucent: editing.translucent,
+      knobsOnly: editing.knobsOnly,
     });
     setEditing(null);
   };
@@ -46,7 +51,7 @@ function ColorRow({
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded border border-border shrink-0"
-            style={{ backgroundColor: editing ? editing.hex : color.hex }}
+            style={swatchStyle(editing ? { hex: editing.hex, translucent: editing.translucent } : color)}
           />
           {editing && (
             <input
@@ -97,6 +102,18 @@ function ColorRow({
         >
           {color.available ? "Active" : "Hidden"}
         </button>
+        {editing ? (
+          <div className="mt-2 space-y-1 text-xs text-text-secondary">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={editing.translucent} onChange={(e) => setEditing({ ...editing, translucent: e.target.checked, knobsOnly: e.target.checked ? true : editing.knobsOnly })} /> Translucent
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={editing.knobsOnly} onChange={(e) => setEditing({ ...editing, knobsOnly: e.target.checked })} /> Only for knobs
+            </label>
+          </div>
+        ) : (color.translucent || color.knobsOnly) && (
+          <div className="mt-1 mono text-[10px] text-text-muted">{[color.translucent && "TRANSLUCENT", color.knobsOnly && "KNOBS ONLY"].filter(Boolean).join(" · ")}</div>
+        )}
       </td>
       <td className="py-3 px-4">
         <div className="flex gap-2">
@@ -149,6 +166,8 @@ interface NewColorForm {
   id: string;
   name: string;
   hex: string;
+  translucent: boolean;
+  knobsOnly: boolean;
 }
 
 export function ColorsAdmin() {
@@ -156,7 +175,7 @@ export function ColorsAdmin() {
     useColorsStore();
 
   const [adding, setAdding] = useState(false);
-  const [newColor, setNewColor] = useState<NewColorForm>({ id: "", name: "", hex: "#ff0000" });
+  const [newColor, setNewColor] = useState<NewColorForm>({ id: "", name: "", hex: "#ff0000", translucent: false, knobsOnly: false });
   const [error, setError] = useState("");
 
   const handleAdd = () => {
@@ -183,8 +202,10 @@ export function ColorsAdmin() {
       hex: newColor.hex,
       rgb: colorsStore.hexToRgb(newColor.hex),
       available: true,
+      ...(newColor.translucent ? { translucent: true } : {}),
+      ...(newColor.knobsOnly ? { knobsOnly: true } : {}),
     });
-    setNewColor({ id: "", name: "", hex: "#ff0000" });
+    setNewColor({ id: "", name: "", hex: "#ff0000", translucent: false, knobsOnly: false });
     setAdding(false);
   };
 
@@ -286,6 +307,17 @@ export function ColorsAdmin() {
                 />
               </div>
             </div>
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-text-secondary">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={newColor.translucent}
+                onChange={(e) => setNewColor({ ...newColor, translucent: e.target.checked, knobsOnly: e.target.checked ? true : newColor.knobsOnly })} />
+              Translucent <span className="text-xs text-text-muted">(striped swatch, see-through in 3D)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={newColor.knobsOnly} onChange={(e) => setNewColor({ ...newColor, knobsOnly: e.target.checked })} />
+              Only for knobs <span className="text-xs text-text-muted">(not offered for the faceplate, accent, sides or bezel)</span>
+            </label>
           </div>
           <div className="flex gap-2">
             <button

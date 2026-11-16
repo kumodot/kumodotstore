@@ -51,6 +51,11 @@ export type Firmware = FirmwareId;
 const FW_CODE = Object.fromEntries(FIRMWARE_LIST.map((f) => [f.id, f.code])) as Record<Firmware, string>;
 
 // every style comes in short and long now (classic long was added with the v0.7 parts)
+/** bezel value meaning "the bezel is deleted" (code field "-"); null = follows the accent, else a color id */
+export const NO_BEZEL = "-";
+/** the color the bezel is drawn with */
+export const bezelId = (b: { bezel: string | null; accent: string }) => (b.bezel && b.bezel !== NO_BEZEL ? b.bezel : b.accent);
+
 export const variantOk = (_s: Style, _h: Height) => true;
 
 const checksum = (str: string) => {
@@ -117,7 +122,7 @@ export function decodeFm1(raw: string): Fm1Build {
   return {
     mode, knobs, body: col(F[0]), accent: col(F[1]),
     side: F[2] === "-" ? null : col(F[2]),
-    bezel: F[3] === "=" ? null : col(F[3]),
+    bezel: F[3] === "=" ? null : F[3] === "-" ? NO_BEZEL : col(F[3]),
     badge,
     logo: F[5] === undefined || F[5] === "-" ? null : col(F[5]),
   };
