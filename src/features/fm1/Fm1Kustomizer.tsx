@@ -254,6 +254,10 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
   return (
     <div>
+      <p className="mb-3 text-[11px] text-text-muted">
+        <span className="mono text-accent mr-2">BETA</span>
+        We are still finishing the Kustomizer, so you may notice small glitches. Thanks for your patience!
+      </p>
       {/* themes */}
       <div className="mb-5">
         <ThemeFilmstrip
