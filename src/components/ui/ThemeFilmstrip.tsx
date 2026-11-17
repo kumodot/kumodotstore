@@ -22,6 +22,13 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
   aspect?: string;   // tailwind aspect class of the thumbnail frame, portrait cases use aspect-[3/4]
 }) {
   const rail = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLElement>(null);
+  // stacked layout (phone, narrow window): the preview is below the strip, so after picking a theme
+  // scroll the strip to the top (under the sticky header) and the result shows right under it
+  const pick = (id: string) => {
+    onSelect(id);
+    if (window.innerWidth < 1024) window.setTimeout(() => root.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
   // Touch screens swipe the rail natively. Mouse gets drag-to-scroll too (it ignores snap while dragging).
   const drag = useRef<{ x: number; left: number } | null>(null);
   const dragged = useRef(false);
@@ -34,7 +41,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
     rail.current?.scrollBy({ left: dir * rail.current.clientWidth * 0.8, behavior: "smooth" });
 
   return (
-    <section aria-label={label}>
+    <section ref={root} aria-label={label} style={{ scrollMarginTop: 76 }}>
       <div className="flex items-center justify-between mb-2">
         <h3 className="mono">{label}</h3>
       </div>
@@ -81,7 +88,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
           return (
             <div key={it.id} className="relative snap-start shrink-0">
               <button
-                onClick={() => onSelect(it.id)}
+                onClick={() => pick(it.id)}
                 aria-pressed={open}
                 className={`group min-w-32 p-1.5 border text-left cursor-pointer
                             transition-colors duration-[450ms] ${open ? "w-auto" : "w-32 hover:w-auto"}

@@ -83,6 +83,10 @@ export class Fm1Scene {
     this.brSel = mk("5", "2.5", "1");
     el.appendChild(this.overlay);
     this.renderer.domElement.style.touchAction = "none";
+    // setSize(..., false) leaves the CSS size alone: without this a phone (pixel ratio 2 to 3) shows the canvas at its pixel size, cropped and shifted away from the brackets
+    this.renderer.domElement.style.width = "100%";
+    this.renderer.domElement.style.height = "100%";
+    this.renderer.domElement.style.display = "block";
     this.scene.background = new THREE.Color("#1f2125");
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
