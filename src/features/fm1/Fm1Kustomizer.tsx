@@ -430,7 +430,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             <div ref={host} className="w-full h-[46vh] min-h-[280px] sm:h-auto sm:aspect-[4/3] sm:max-h-[32vh] lg:max-h-none rounded-xl overflow-hidden border border-border bg-[#1f2125]" />
             <span className="pointer-events-none absolute right-2 top-2 hidden sm:block mono text-[8px] leading-none tracking-wider text-white/45">LOW-POLY PREVIEW · NOT FINAL QUALITY</span>
             <div className="pointer-events-none absolute left-2 top-2 sm:left-3 sm:top-3 bg-black/60 px-2 py-1 sm:px-2.5 sm:py-1.5">
-              <span className="ks block text-sm sm:text-xl leading-none text-white">{partLabel}</span>
+              <span className="ks block text-[11px] sm:text-xl leading-none text-white">{partLabel}</span>
             </div>
             {hist.length > 0 && !selKnob && (
               <button onClick={undo} title="Undo (Ctrl+Z)" className={`${radial ? "max-sm:hidden " : ""}absolute right-2 bottom-2 z-20 mono text-[10px] sm:text-[11px] px-2 sm:px-2.5 min-h-7 sm:min-h-8 border border-border-light bg-[#0d0d0c]/85 text-text-primary hover:border-accent hover:text-accent cursor-pointer`}>↶ UNDO</button>
@@ -517,7 +517,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                   <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={256} fluid />
                   <button onClick={() => stepModel(-1)} className={tri} style={{ left: "20%", top: "53%" }} aria-label="Previous knob model"><Tri dir="l" /></button>
                   <button onClick={() => stepModel(1)} className={tri} style={{ left: "80%", top: "53%" }} aria-label="Next knob model"><Tri dir="r" /></button>
-                  <span className="ks absolute left-1/2 -translate-x-1/2 bottom-[7%] whitespace-nowrap bg-black/60 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-base leading-none text-white">{allKnobs && <span className="text-accent mr-1.5">ALL ·</span>}{spec?.name ?? `${sel.style} ${sel.height}`}</span>
+                  <span className="absolute inset-x-0 bottom-[7%] flex justify-center"><span className="ks whitespace-nowrap bg-black/60 px-1 sm:px-2 py-0.5 sm:py-1 text-[8px] sm:text-base leading-none text-white">{allKnobs && <span className="text-accent mr-1.5">ALL ·</span>}{spec?.name ?? `${sel.style} ${sel.height}`}</span></span>
                 </div>
               );
             })()}
