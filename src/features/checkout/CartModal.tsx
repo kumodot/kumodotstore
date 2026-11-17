@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
+import { BACKEND_URL } from "@/config/site.ts";
 import { cartStore } from "@/data/cartStore.ts";
 import { useCart } from "./useCart.ts";
 import { getRegionForCountry, getCheckoutCountriesGrouped, ISO_COUNTRY_NAMES, type CheckoutCountry } from "@/data/shipping.ts";
@@ -274,7 +275,7 @@ export function CartModal({ onClose }: CartModalProps) {
               price: i.product.price,
             })),
           };
-          fetch("https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec", {
+          fetch(BACKEND_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },

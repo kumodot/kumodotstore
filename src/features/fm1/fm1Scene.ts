@@ -132,6 +132,8 @@ export class Fm1Scene {
       this.meshes.push(m);
       const mat = m.material as THREE.MeshStandardMaterial;
       mat.roughness = 0.5;
+      // the factory body and the case sides share the bottom plane (y = -19.5 mm): push the body back so the case wins and the two stop z-fighting
+      if (mat.name === "mat_fm1_device_body") { mat.polygonOffset = true; mat.polygonOffsetFactor = 2; mat.polygonOffsetUnits = 2; }
       this.mats[mat.name] = mat;
     });
     this.scene.add(gltf.scene);
@@ -218,7 +220,7 @@ export class Fm1Scene {
     m.rotation.x = -Math.PI / 2;
     const k = 1 / 0.56;                              // so the plate's footprint lands on the 56% core
     m.scale.set(size.x * k * 1.04, size.z * k * 1.04, 1);
-    m.position.set((box.min.x + box.max.x) / 2, box.min.y - 0.0004, (box.min.z + box.max.z) / 2 + size.z * 0.015);
+    m.position.set((box.min.x + box.max.x) / 2, box.min.y - 0.0012, (box.min.z + box.max.z) / 2 + size.z * 0.015);
     m.renderOrder = -1;
     this.scene.add(m);
     this.deviceShadow = m;

@@ -32,3 +32,10 @@ kustomizer-fm1-dev.bat
 publish.bat
 Store_Studio.bat
 docs/
+
+# local-only helpers (not needed to build the site)
+tools/export_order_tables.py
+tools/fm1Code.check.ts
+tools/make_knob_render.py
+push-store-mode.bat
+eslint.config.js

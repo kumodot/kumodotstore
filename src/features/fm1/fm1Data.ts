@@ -1,7 +1,7 @@
 import { decodeFm1, encodeFm1, type Fm1Build } from "./fm1Code.ts";
 import { FM1_THEMES } from "@/data/fm1Themes.ts";
 
-export const FM1_VERSION = "0.2.0";
+export const FM1_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
 
 /** FM1 comes from the factory in these colors (plastic body + rubber keys). Preview only, never in the code. */
 export const FACTORY_COLORS = [

@@ -1,10 +1,10 @@
 import { createPortal } from "react-dom";
 import { useState } from "react";
+import { BACKEND_URL } from "@/config/site.ts";
 
 // Apps Script web app URL. Same URL lives in telegramNotify.ts and CartModal.tsx
 // (see STORE_BIBLE §20). It used to be duplicated in StorefrontPage.tsx too; the
 // modal moved here so the Kustomizer can share it, which keeps the count at 3.
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec";
 
 export function NotifyModal({ productId, productName, type, title, blurb, discountCode, discountPercent, discountUntil, onClose }: {
   productId: string;

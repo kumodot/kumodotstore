@@ -1,3 +1,8 @@
+// The ONE place for the Google Apps Script web app URL (waitlist, order and alert backend).
+// After any backend redeploy, change it here and only here.
+export const BACKEND_URL =
+  "https://script.google.com/macros/s/AKfycby3R8jh3ehmFnnm1moDTsVHKs0qidsFWJLWnAMZc7XUolsz45ob8wRg2sGJ-fHadPEI/exec";
+
 export const TELEGRAM = {
   botToken: import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string,
   chatId: import.meta.env.VITE_TELEGRAM_CHAT_ID as string,

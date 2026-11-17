@@ -42,7 +42,7 @@ export function StudioBar() {
   return (
     <div className="mb-6 border border-border-light bg-surface-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h2 className="ks text-2xl text-text-primary">STORE STUDIO</h2>
+        <h2 className="ks text-2xl text-text-primary">STORE STUDIO <span className="mono text-xs text-text-muted align-middle">v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev"}</span></h2>
         <div className="flex flex-wrap gap-2">
           {PREVIEWS.map(([label, hash]) => (
             <a key={label} href={`${window.location.origin}/${hash}`} target="_blank" rel="noopener noreferrer"
