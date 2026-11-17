@@ -230,7 +230,12 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       if (target.part === "bezel") b.bezel = id;
       else if (target.part === "logo") b.logo = id;
       else if (target.part === "side") b.side = id;
-      else { b[target.part] = id; if (target.part === "body" && !FM1_FEATURES.sides) b.side = null; }
+      else {
+        b[target.part] = id;
+        if (target.part === "body" && !FM1_FEATURES.sides) b.side = null;
+        // public view: "Accent + Bezel" is one color, so a plain bezel (no firmware badge) follows the new accent even when the theme had its own
+        if (target.part === "accent" && !FM1_FEATURES.badge && b.badge === null && b.bezel !== NO_BEZEL) b.bezel = null;
+      }
     } else if (target.k === "group") {
       GROUPS[target.g].forEach((s) => { b.knobs[s][target.part] = id; });
     } else if (allKnobs) SLOTS.forEach((x) => { b.knobs[x][target.part] = id; });
