@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { colorsStore } from "@/data/colorsStore.ts";
 import { SITE } from "@/config/site.ts";
 import { offeredColors } from "@/data/colorAvailability.ts";
@@ -42,7 +42,7 @@ type FpPartName = "body" | "accent" | "side" | "bezel" | "logo";
 const MODELS = [
   { st: "classic", h: "short" }, { st: "classic", h: "long" }, { st: "groove", h: "short" }, { st: "groove", h: "long" },
 ] as const;
-const effPart = (p: FpPartName): FpPartName => (!FM1_FEATURES.sides && p === "side" ? "body" : !FM1_FEATURES.badge && (p === "bezel" || p === "logo") ? "accent" : p);
+const effPartBase = (p: FpPartName): FpPartName => (!FM1_FEATURES.sides && p === "side" ? "body" : !FM1_FEATURES.badge && p === "logo" ? "accent" : p);
 /** The materials a faceplate part controls (for the highlight and the hover glow). */
 const fpMats = (p: FpPartName, sideFollows: boolean) =>
   p === "body" ? ["mat_faceplate_body", ...(sideFollows ? ["mat_faceplate_side"] : [])]
@@ -51,7 +51,7 @@ const fpMats = (p: FpPartName, sideFollows: boolean) =>
 /** Features that are off are fixed in the build, so nothing hidden can reach the code. */
 const norm = (b: Fm1Build): Fm1Build => {
   if (!FM1_FEATURES.sides) b.side = null;
-  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; if (b.bezel !== NO_BEZEL) b.bezel = null; }   // a deleted bezel stays deleted
+  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; }   // the bezel color (or its deletion) stays as it is
   return b;
 };
 
@@ -86,6 +86,11 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     window.addEventListener("pointerdown", down, true);
     return () => window.removeEventListener("pointerdown", down, true);
   }, [facOpen]);
+  // bezel and accent are one color ("Accent + Bezel") until the buyer unlinks them; unlinked, each has its own color
+  const [forceSplit, setForceSplit] = useState(false);
+  const split = forceSplit || bezelId(build) !== build.accent;
+  const effPart = (p: FpPartName): FpPartName => effPartBase(!split && p === "bezel" ? "accent" : p);
+  const setLink = (on: boolean) => { setForceSplit(!on); edit((b) => { b.bezel = on ? null : b.bezel === NO_BEZEL ? NO_BEZEL : b.accent; }); };
   const [allKnobs, setAllKnobs] = useState(false);   // "Affect all" is a mode: while on, every model / color change goes to all 8 knobs (each keeps its other settings)
   const [naming, setNaming] = useState(false);
   // the buyer tried to edit a part that is not editable yet (sides color, firmware badge): a notice over the 3D view, it goes away by itself
@@ -206,7 +211,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       setBuild(b); setThemeId("");
       note = "Sides color is not editable yet (soon). The sides now follow the faceplate color.";
     } else if (raw === "side" && part !== raw) note = "Sides color is not editable yet (soon).";
-    else if ((raw === "logo" || (raw === "bezel" && cur.badge !== null && cur.bezel !== null && cur.bezel !== NO_BEZEL)) && part !== raw) note = "Editing firmware badges is coming soon!";
+    else if (raw === "logo" && part !== raw) note = "Editing firmware badges is coming soon!";
     if (note) setSoonAsk({ text: note });
     setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
   function pickFaceplate() { pickFp("body"); }
@@ -233,8 +238,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       else {
         b[target.part] = id;
         if (target.part === "body" && !FM1_FEATURES.sides) b.side = null;
-        // public view: "Accent + Bezel" is one color, so a plain bezel (no firmware badge) follows the new accent even when the theme had its own
-        if (target.part === "accent" && !FM1_FEATURES.badge && b.badge === null && b.bezel !== NO_BEZEL) b.bezel = null;
+        // linked ("Accent + Bezel"): the bezel follows the new accent, even when the theme had a bezel color of its own
+        if (target.part === "accent" && !split && b.bezel !== NO_BEZEL) b.bezel = null;
       }
     } else if (target.k === "group") {
       GROUPS[target.g].forEach((s) => { b.knobs[s][target.part] = id; });
@@ -261,7 +266,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     setVariant(selKnob, { style: n.st, height: n.h });
   };
 
-  const loadBuild = (b: Fm1Build, id: string) => { snap(); setSoonAsk(null); setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
+  const loadBuild = (b: Fm1Build, id: string) => { snap(); setSoonAsk(null); setForceSplit(false); setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
   const applyTheme = (id: string) => {
     const t = FIXED_THEMES.find((x) => x.id === id);
     if (t) return loadBuild(t.build, id);
@@ -308,8 +313,52 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const live = info.launched;
   const waitBlurb = `The FM1_Kz cases and knobs are almost here. Join the list and get ${SITE.waitlist.discountPercent}% off at launch, we will email you when the listing goes live.`;
 
-  // the current build carries parts the public editor does not offer (a fixed theme with sides or a firmware badge)
-  const hasExclusive = (build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null || (build.bezel !== null && build.bezel !== NO_BEZEL)) && !FM1_FEATURES.badge);
+  // an untouched theme carries parts the public editor does not offer (sides color, firmware badge): the note is only for that. Once the
+  // buyer changes anything (themeId is cleared) the design is theirs and fully editable, so the note never comes back. The bezel color is editable.
+  const hasExclusive = themeId !== "" && ((build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null) && !FM1_FEATURES.badge));
+
+  // Faceplate / Accent + Bezel buttons. Only a chain between Accent and Bezel: linked it is whole and gray, on hover it turns red and
+  // broken, a click cuts it. Cut it stays in the same place, broken and gray; on hover it turns red and whole, a click joins them again.
+  const exclusiveNote = (
+    <p className="border-l-2 border-accent pl-3 text-xs font-medium text-accent">
+      This theme includes exclusive parts that are not open for customization yet. You can order it as it is; changing anything removes them.
+    </p>
+  );
+  const renderFpButtons = () => {
+    const on = (part: FpPartName) => target.k === "fp" && effPart(target.part) === part;
+    const pick = (part: FpPartName) => { pickFp(part); openRadial(); };
+    const dot = (id: string) => <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(id) }} />;
+    const svg = (children: ReactNode) => <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+    const chain = svg(<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>);
+    const broken = svg(<><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-.12-7.07 5 5 0 0 0-6.95 0l-1.72 1.71" /><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 .12 7.07 5 5 0 0 0 6.95 0l1.71-1.71" /><path d="M8 2v3M2 8h3M16 19v3M19 16h3" /></>);
+    const base = "inline-flex items-center gap-2 px-3 min-h-9 cursor-pointer";
+    const border = (sel: boolean) => (sel ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent");
+    return (
+      <>
+        <button onClick={() => pick("body")} className={`${base} border ${border(on("body"))}`}>{dot(shown.body)}Faceplate</button>
+        {!split ? (
+          <div className={`inline-flex items-stretch border ${border(on("accent"))}`}>
+            <button onClick={() => pick("accent")} className={`${base} pr-2`}>{dot(shown.accent)}Accent</button>
+            <button onClick={() => setLink(false)} title="Unlink: give the bezel its own color" aria-label="Unlink bezel from accent"
+              className="group/cut w-7 flex items-center justify-center text-text-muted hover:text-red-500 cursor-pointer">
+              <span className="group-hover/cut:hidden">{chain}</span><span className="hidden group-hover/cut:block">{broken}</span>
+            </button>
+            <button onClick={() => pick("accent")} className={`${base} pl-2`}>Bezel</button>
+          </div>
+        ) : (
+          <>
+            <button onClick={() => pick("accent")} className={`${base} border ${border(on("accent"))}`}>{dot(shown.accent)}Accent</button>
+            <button onClick={() => setLink(true)} title="Link: the bezel follows the accent again" aria-label="Link bezel to accent"
+              className="group/cut w-7 min-h-9 flex items-center justify-center text-text-muted hover:text-red-500 cursor-pointer">
+              <span className="group-hover/cut:hidden">{broken}</span>
+              <span className="hidden group-hover/cut:block">{chain}</span>
+            </button>
+            <button onClick={() => pick("bezel")} className={`${base} border ${border(on("bezel"))}`}>{dot(bezelId(shown))}Bezel</button>
+          </>
+        )}
+      </>
+    );
+  };
 
   const codePanel = (
     <>
@@ -367,7 +416,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
         />
       </div>
 
-      {hasExclusive && (
+      {hasExclusive && mode !== "case" && (
         <p className="mb-4 -mt-2 border-l-2 border-accent pl-3 text-xs font-medium text-accent">
           This theme includes exclusive parts that are not open for customization yet. You can order it as it is; changing anything removes them.
         </p>
@@ -476,18 +525,13 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           {/* phone: the same two buttons, right under the 3D view instead of far below */}
           {mode === "case" && !selKnob && (
             <div className="lg:hidden flex flex-wrap items-center gap-2 text-xs" data-keep-radial>
-              {([["body", "Faceplate", shown.body], ["accent", FM1_FEATURES.badge ? "Accent" : "Accent + Bezel", shown.accent]] as const).map(([part, label, id]) => (
-                <button key={part} onClick={() => { pickFp(part); openRadial(); }}
-                  className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${target.k === "fp" && effPart(target.part) === part ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
-                  <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(id) }} />
-                  {label}
-                </button>
-              ))}
+              {renderFpButtons()}
+              {hasExclusive && <div className="basis-full pt-1">{exclusiveNote}</div>}
             </div>
           )}
           {/* knob card */}
           {sel && selKnob && (
-            <section className="border border-border bg-surface-card p-2 sm:p-3">
+            <section className="border border-border bg-surface-card p-2 sm:p-3" data-keep-radial>
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
                 <span className="text-sm font-semibold text-text-primary">Knob {SLOT_NAME[selKnob]}</span>
                 {/* mode: every change goes to all 8 knobs (checking it copies this knob to the others first) */}
@@ -596,13 +640,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           {/* the two color parts of the case as buttons (the accent is small and easy to miss), plus what is coming */}
           {mode === "case" && (
             <div className="hidden lg:flex lg:w-4/5 lg:mr-auto flex-wrap items-center gap-2 text-xs" data-keep-radial>
-              {([["body", "Faceplate", shown.body], ["accent", FM1_FEATURES.badge ? "Accent" : "Accent + Bezel", shown.accent]] as const).map(([part, label, id]) => (
-                <button key={part} onClick={() => { pickFp(part); openRadial(); }}
-                  className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${target.k === "fp" && effPart(target.part) === part ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
-                  <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(id) }} />
-                  {label}
-                </button>
-              ))}
+              {renderFpButtons()}
+              {hasExclusive && <div className="basis-full pt-1">{exclusiveNote}</div>}
             </div>
           )}
 
