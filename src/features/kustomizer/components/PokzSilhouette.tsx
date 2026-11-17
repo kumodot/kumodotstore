@@ -10,14 +10,14 @@ const ROWS = [586, 683, 780, 876];
 const PAD_W = 69;
 const PAD_H = 78;
 
-export function PokzSilhouette({ ids, className }: { ids: string[]; className?: string }) {
+export function PokzSilhouette({ ids, className, bare = false }: { ids: string[]; className?: string; bare?: boolean }) {
   return (
     <svg viewBox="0 0 613 1098" className={className} role="img" aria-label="POKZ case top view">
-      <rect width="613" height="1098" fill="#0D0D0C" />
+      {!bare && <rect width="613" height="1098" fill="#0D0D0C" />}
 
       <g id="handle">
         <rect x="128" y="28" width="343" height="131" rx="64" fill="#2A2926" />
-        <rect x="170" y="72" width="259" height="46" rx="23" fill="#0D0D0C" />
+        <rect x="170" y="72" width="259" height="46" rx="23" fill={bare ? "none" : "#0D0D0C"} />
       </g>
 
       <g id="case">

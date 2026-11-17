@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { PRODUCTS } from "@/data/products.ts";
 import { cartStore } from "@/data/cartStore.ts";
@@ -12,6 +12,10 @@ import { SaveThemeModal } from "@/components/ui/SaveThemeModal.tsx";
 import { ConfirmModal } from "@/components/ui/ConfirmModal.tsx";
 import { ThemeFilmstrip } from "@/components/ui/ThemeFilmstrip.tsx";
 import { PokzThumb } from "./components/PokzThumb.tsx";
+import { PickerCycle } from "./PickerCycle.tsx";
+import { Fm1Thumb } from "@/features/fm1/Fm1Thumb.tsx";
+import { KnobRender, preloadKnobRenders } from "@/features/fm1/KnobRender.tsx";
+import { FACTORY_COLORS, FIXED_THEMES } from "@/features/fm1/fm1Data.ts";
 import { CodeInput } from "./components/CodeInput.tsx";
 import { CodeOutput } from "./components/CodeOutput.tsx";
 import { ColorLegend } from "./components/ColorLegend.tsx";
@@ -31,6 +35,9 @@ const savedKey = (modelId: string) => `kumodot_saved_themes_v1_${modelId}`;
 function loadSavedThemes(modelId: string): SavedTheme[] {
   try { return JSON.parse(localStorage.getItem(savedKey(modelId)) ?? "[]"); } catch { return []; }
 }
+
+// Studio only: the scripted demo for recording reels (not in the production bundle)
+const DemoMode = import.meta.env.DEV ? lazy(() => import("@/features/demo/DemoMode.tsx").then((m) => ({ default: m.DemoMode }))) : null;
 
 export function KustomizerPage() {
   const { modelId } = useParams<{ modelId: string }>();
@@ -99,6 +106,8 @@ export function KustomizerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model?.id]);
 
+  useEffect(() => { preloadKnobRenders(); }, []);
+
   // Only reachable if CASE_MODELS is empty — a build mistake, not a bad URL.
   if (!model) {
     return (
@@ -123,9 +132,42 @@ export function KustomizerPage() {
     }
   };
 
+  // each card of the picker cycles through the theme miniatures of its own product
+  const allColors = colorsStore.getColors();
+  const hexOf = (id: string) => allColors.find((x) => x.id === id)?.hex ?? "#888888";
+  const trOf = (id: string) => !!allColors.find((x) => x.id === id)?.translucent;
+  const factory = FACTORY_COLORS.find((f) => f.id === "beige1") ?? FACTORY_COLORS[0];
+  // FM1 Knobs card: the pretty knob renders, in the knob styles and colors of the themes (the ones on the volume slot too), no repeats
+  const knobFrames = (() => {
+    const seen = new Set<string>();
+    const out: ReactNode[] = [];
+    for (const t of FIXED_THEMES) {
+      for (const slot of ["p1", "vol"] as const) {
+        const k = t.build.knobs[slot];
+        const key = `${slot === "vol" ? "v" : ""}${k.style}${k.height}${k.body}${k.cap}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(
+          <span key={key} className="block h-full aspect-square scale-[1.2] origin-[50%_55%]">
+            <KnobRender style={k.style} height={k.height} slot={slot} body={hexOf(k.body)} cap={hexOf(k.cap)} bodyT={trOf(k.body)} capT={trOf(k.cap)} size={200} fluid />
+          </span>,
+        );
+      }
+    }
+    return out;
+  })();
+  const cardThumbs = (kind: string): ReactNode[] => kind === "grid"
+    ? templates.map((t) => <span key={t.name} className="block h-full aspect-[3/4] scale-[0.92]"><PokzThumb code={t.code} bare /></span>)
+    : kind === "fm1-knobs"
+      ? knobFrames
+      : FIXED_THEMES.map((t) => (
+          <span key={t.id} className="block w-full aspect-[8/5] scale-[1.1]">
+            <Fm1Thumb build={{ ...t.build, mode: "case" }} hex={hexOf} tr={trOf} factory={factory} bare />
+          </span>
+        ));
   const picker = (
     <div className="flex gap-2 sm:gap-3 justify-center mb-6" role="tablist" aria-label="Choose your product">
-      {KUSTOMIZER_PRODUCTS.map((p) => (
+      {KUSTOMIZER_PRODUCTS.map((p, idx) => (
         <button
           key={p.id}
           role="tab"
@@ -135,7 +177,9 @@ export function KustomizerPage() {
                       ${p.id === kit.id ? "border-accent bg-surface-card" : "border-border hover:border-accent"}`}
         >
           <span className="block overflow-hidden bg-[#050505]">
-            <img src={p.image} alt="" className="w-full aspect-[4/3] object-cover transition-transform duration-[450ms] ease-[cubic-bezier(.4,0,.2,1)] group-hover:scale-[1.2]" loading="lazy" />
+            <span className="block transition-transform duration-[450ms] ease-[cubic-bezier(.4,0,.2,1)] group-hover:scale-[1.2]">
+              <PickerCycle items={cardThumbs(p.kind)} offset={idx * 900} />
+            </span>
           </span>
           <GlitchTitle as="span" className="ks block text-lg sm:text-xl text-text-primary mt-2" text={p.name.toUpperCase()} auto={false} />
           {!p.launched && <span className="mono block text-accent mt-0.5">coming soon</span>}
@@ -144,14 +188,21 @@ export function KustomizerPage() {
     </div>
   );
 
+  const demo = DemoMode ? <Suspense fallback={null}><DemoMode /></Suspense> : null;
   if (kit.kind !== "grid") {
     return (
       <div className="max-w-7xl 2xl:max-w-[1560px] mx-auto px-4 py-8">
+        {/* scrolls away with the page, it does not need to stay in view */}
+        <p className="mb-3 text-center text-[11px] text-text-muted">
+          <span className="mono text-accent mr-2">BETA</span>
+          We are still finishing the Kustomizer, so you may notice small glitches. Thanks for your patience!
+        </p>
         <div className="text-center mb-4">
           <GlitchTitle as="h1" className="ks text-3xl text-text-primary" text="KUSTOMIZER" />
           <p className="text-sm text-text-secondary mt-1">{kit.tagline}</p>
         </div>
         {picker}
+        {demo}
         <Suspense fallback={<p className="text-center text-text-muted py-16">Loading 3D preview…</p>}>
           <Fm1Kustomizer key={kit.id} mode={kit.kind === "fm1-case" ? "case" : "knobs"} />
         </Suspense>
@@ -161,6 +212,7 @@ export function KustomizerPage() {
 
   return (
     <div className="relative max-w-7xl mx-auto px-4 py-8">
+      {demo}
       {/* glitch sound switch: just an icon in the corner (speaker open / speaker crossed out) */}
       <button
         onClick={() => { setSoundOn(!sound); setSound(!sound); }}

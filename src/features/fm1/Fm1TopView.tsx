@@ -76,13 +76,14 @@ const lum = (h: string) => {
   return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
 };
 
-export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-full" }: {
+export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-full", bare = false }: {
   build: Fm1Build;
   hex: (id: string) => string;
   tr?: (id: string) => boolean;   // translucent colors: the knob is drawn faded with diagonal stripes
   factory: { body: string; keys: string };
   ix?: TopViewInteraction;
   className?: string;
+  bare?: boolean;   // no dark backdrop of its own (a card behind it shows through)
 }): ReactNode {
   const hatch = useId();
   const stripes = useId();
@@ -120,7 +121,7 @@ export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-
           <rect width="5" height="14" fill="#fff" fillOpacity=".55" />
         </pattern>
       </defs>
-      <rect x={-pad} y={-pad} width={w + 2 * pad} height={h + 2 * pad} fill="#0D0D0C" />
+      {!bare && <rect x={-pad} y={-pad} width={w + 2 * pad} height={h + 2 * pad} fill="#0D0D0C" />}
 
       <path d={outline} fill={factory.body} />
       {keys.map((d, i) => <path key={i} d={d} fill={factory.keys} />)}

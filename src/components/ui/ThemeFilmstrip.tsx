@@ -37,23 +37,23 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
     <section aria-label={label}>
       <div className="flex items-center justify-between mb-2">
         <h3 className="mono">{label}</h3>
-        <div className="flex gap-1">
-          {([-1, 1] as const).map((d) => (
-            <button
-              key={d}
-              onClick={() => nudge(d)}
-              aria-label={d < 0 ? "Scroll left" : "Scroll right"}
-              className="w-9 h-9 border border-border-light text-text-primary cursor-pointer
-                         hover:bg-accent hover:border-accent hover:text-[#0D0D0C] transition-colors"
-            >
-              {d < 0 ? "‹" : "›"}
-            </button>
-          ))}
-        </div>
       </div>
+      <div className="relative">
+      {/* the arrows sit over the strip, in its corners: bigger to hit, and no row of their own */}
+      {([-1, 1] as const).map((d) => (
+        <button
+          key={d}
+          onClick={() => nudge(d)}
+          aria-label={d < 0 ? "Scroll left" : "Scroll right"}
+          className={`absolute top-[38%] -translate-y-1/2 z-10 w-11 h-11 text-2xl leading-none border border-border-light bg-[#0d0d0c]/80 text-text-primary cursor-pointer
+                      hover:bg-accent hover:border-accent hover:text-[#0D0D0C] transition-colors ${d < 0 ? "left-1" : "right-1"}`}
+        >
+          {d < 0 ? "‹" : "›"}
+        </button>
+      ))}
       <div
         ref={rail}
-        className="flex items-start gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
+        className="flex items-start gap-3 overflow-x-auto px-14 scroll-px-14 pb-2 snap-x snap-mandatory scroll-smooth"
         onPointerDown={(e) => {
           if (e.pointerType !== "mouse" || !rail.current) return;
           dragged.current = false;
@@ -122,6 +122,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
             <span className="mono text-[9px] whitespace-nowrap opacity-70">this device only</span>
           </button>
         )}
+      </div>
       </div>
     </section>
   );

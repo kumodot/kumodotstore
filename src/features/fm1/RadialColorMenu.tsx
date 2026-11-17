@@ -7,8 +7,8 @@ import { swatchStyle } from "@/utils/swatch.ts";
 // (marked data-keep-radial), where a tap just selects another part.
 export function ringLayout(n: number, sw: number, gap: number): { r: number; a: number }[] {
   const out: { r: number; a: number }[] = [];
-  const step = sw + 12;
-  let r0 = Math.max(sw * 1.7, Math.ceil((n * (sw + gap)) / (2 * Math.PI)));
+  const step = sw + 4;
+  let r0 = Math.max(sw * 1.3, Math.ceil((n * (sw + gap)) / (2 * Math.PI)));
   r0 = Math.min(r0, sw * 2.6);   // beyond this a second ring is neater than one huge ring
   let left = n;
   for (let k = 0; left > 0; k++) {
@@ -30,10 +30,10 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
   children?: React.ReactNode;   // buttons under the ring (Body / Cap / Apply to all)
 }) {
   const phone = typeof window !== "undefined" && window.innerWidth < 640;
-  const SW = phone ? 34 : 40;
-  const spots = ringLayout(colors.length, SW, phone ? 6 : 8);
+  const SW = phone ? 30 : 36;
+  const spots = ringLayout(colors.length, SW, 2);
   const reach = Math.max(...spots.map((s) => s.r)) + SW / 2 + 4;
-  const center = Math.min(100, Math.round(reach * 0.78));   // the middle disc leaves the swatches a clear gap
+  const center = Math.round(Math.min(...spots.map((x) => x.r)) - SW / 2 - 3);   // the middle disc fills the ring, the name wraps inside
   const [hover, setHover] = useState<string | null>(null);
   const [off, setOff] = useState({ x: 0, y: 0 });   // where the buyer dragged the menu to
   const [out, setOut] = useState(false);              // fan out from the center, fast

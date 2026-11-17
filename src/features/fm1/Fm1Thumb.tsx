@@ -9,16 +9,17 @@ const BARE: Record<Slot, [number, number]> = {
 };
 
 /** Filmstrip thumbnail: the same top view as the big panel, without interaction. */
-export function Fm1Thumb({ build, hex, tr, factory }: {
+export function Fm1Thumb({ build, hex, tr, factory, bare = false }: {
   build: Fm1Build;
   hex: (id: string) => string;
   tr?: (id: string) => boolean;   // translucent colors (knobs are drawn striped and see-through)
   factory: { body: string; keys: string };
+  bare?: boolean;   // no dark backdrop (the card behind it shows through)
 }) {
   if (build.mode === "knobs") {
     return (
       <svg viewBox="0 0 1000 560" className="w-full h-full" role="img" aria-label="Knob set">
-        <rect width="1000" height="560" fill="#0D0D0C" />
+        {!bare && <rect width="1000" height="560" fill="#0D0D0C" />}
         {([...GROUPS.L, ...GROUPS.R] as Slot[]).map((s) => {
           const k = build.knobs[s];
           const [cx, cy] = BARE[s];
@@ -32,5 +33,5 @@ export function Fm1Thumb({ build, hex, tr, factory }: {
       </svg>
     );
   }
-  return <Fm1TopView build={build} hex={hex} tr={tr} factory={factory} />;
+  return <Fm1TopView build={build} hex={hex} tr={tr} factory={factory} bare={bare} />;
 }

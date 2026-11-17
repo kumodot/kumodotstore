@@ -5,7 +5,7 @@ import { offeredColors } from "@/data/colorAvailability.ts";
 import { NotifyModal } from "@/components/ui/NotifyModal.tsx";
 import { OrderCopiedModal } from "@/components/ui/OrderCopiedModal.tsx";
 import { exportFm1Image } from "./fm1Image.ts";
-import { KnobRender } from "./KnobRender.tsx";
+import { KnobRender, preloadKnobRenders } from "./KnobRender.tsx";
 import { firmwareById } from "@/data/firmwares.ts";
 import { FM1_FEATURES, FM1_PUBLIC_VIEW } from "@/data/fm1Features.ts";
 import { KnobStats } from "./KnobStats.tsx";
@@ -38,6 +38,10 @@ const cloneBuild = (b: Fm1Build): Fm1Build => JSON.parse(JSON.stringify(b));
 
 type FpPartName = "body" | "accent" | "side" | "bezel" | "logo";
 /** A part that is turned off in FM1_FEATURES hands its clicks to the part that now drives it. */
+/** The four knob models, in the order the arrows go through them. */
+const MODELS = [
+  { st: "classic", h: "short" }, { st: "classic", h: "long" }, { st: "groove", h: "short" }, { st: "groove", h: "long" },
+] as const;
 const effPart = (p: FpPartName): FpPartName => (!FM1_FEATURES.sides && p === "side" ? "body" : !FM1_FEATURES.badge && (p === "bezel" || p === "logo") ? "accent" : p);
 /** The materials a faceplate part controls (for the highlight and the hover glow). */
 const fpMats = (p: FpPartName, sideFollows: boolean) =>
@@ -50,6 +54,10 @@ const norm = (b: Fm1Build): Fm1Build => {
   if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; if (b.bezel !== NO_BEZEL) b.bezel = null; }   // a deleted bezel stays deleted
   return b;
 };
+
+/** A fixed theme has a sides color of its own, and the public editor does not offer sides yet: its faceplate cannot be edited,
+ *  unless the faceplate becomes one plain color (sides follow it). The badge, logo and bezel stay as the theme has them and are printed with it. */
+const isLocked = (b: Fm1Build) => !FM1_FEATURES.sides && b.side !== null && b.side !== b.body;
 
 export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const info = KUSTOMIZER_PRODUCTS.find((p) => p.kind === (mode === "case" ? "fm1-case" : "fm1-knobs"))!;
@@ -70,11 +78,20 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [msg, setMsg] = useState("");
   const [waitOpen, setWaitOpen] = useState(false);
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
-  const [allDone, setAllDone] = useState(false);
+  const [facOpen, setFacOpen] = useState(false);   // the device-color drawer over the 3D view
+  const facRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!facOpen) return;
+    const down = (e: PointerEvent) => { if (!facRef.current?.contains(e.target as Node)) setFacOpen(false); };
+    window.addEventListener("pointerdown", down, true);
+    return () => window.removeEventListener("pointerdown", down, true);
+  }, [facOpen]);
+  const [allKnobs, setAllKnobs] = useState(false);   // "Affect all" is a mode: while on, every model / color change goes to all 8 knobs (each keeps its other settings)
   const [naming, setNaming] = useState(false);
-  const [flashSoon, setFlashSoon] = useState(0);   // counts the clicks on a turned-off part: each one restarts the flash of its SOON tag
+  // the buyer tried to edit a part that is not editable yet (sides color, firmware badge): a notice over the 3D view, it goes away by itself
+  const [soonAsk, setSoonAsk] = useState<{ text: string } | null>(null);
+  const [hist, setHist] = useState<{ b: Fm1Build; id: string }[]>([]);   // undo stack: the builds before each change
   const [updating, setUpdating] = useState(false);
-  const [peek, setPeek] = useState<string | null>(null);   // a shape button under the mouse: its stats are shown to compare
   const [origin, setOrigin] = useState<string | null>(null);   // the saved theme the buyer is editing, if any
   // color menu docked on the 3D view, opened by tapping a part (3D or 2D view)
   const [radial, setRadial] = useState(false);
@@ -87,6 +104,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [hover, setHover] = useState<Hover | null>(null);
   const buildRef = useRef(build);
   buildRef.current = build;
+  const themeIdRef = useRef(themeId); themeIdRef.current = themeId;
 
   // the code is the build; derived, never stored
   const code = useMemo(() => encodeFm1(build), [build]);
@@ -148,41 +166,97 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   }, [targetLabel, hover]);
   useEffect(() => { scene.current?.setHover(hover?.names ?? []); }, [hover]);
   useEffect(() => { scene.current?.highlight(hlNames); }, [hlNames]);
+  // the notice goes away by itself
+  useEffect(() => {
+    if (!soonAsk) return;
+    const t = window.setTimeout(() => setSoonAsk(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [soonAsk]);
+  useEffect(() => { preloadKnobRenders(); }, []);
+  // Studio only: hooks for the demo mode (fake cursor + scripted clicks)
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    (window as unknown as { __fm1Demo?: unknown }).__fm1Demo = { scene: scene.current, slots: SLOTS, pickKnob, pickFp, openRadial, clearSel };
+  });
+  useEffect(() => { if (!selKnob) setAllKnobs(false); }, [selKnob]);
+  // Ctrl/Cmd + Z = undo; left / right arrows = previous / next knob model (not while typing in a field)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && selKnob) {
+        e.preventDefault(); stepModel(e.key === "ArrowRight" ? 1 : -1); return;
+      }
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.key.toLowerCase() !== "z") return;
+      e.preventDefault(); undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
 
   function pickFp(raw: FpPartName) {
+    const cur = buildRef.current;
     const part = effPart(raw);
-    if (raw === "side" && part !== raw) setFlashSoon((n) => n + 1); setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
+    let note: string | null = null;
+    if (isLocked(cur)) {
+      // a theme with its own sides color: touching the faceplate copies the faceplate color onto the sides (they follow it from now on)
+      const b = cloneBuild(cur); b.side = null;
+      setHist((h) => [...h.slice(-49), { b: cloneBuild(cur), id: themeIdRef.current }]);
+      setBuild(b); setThemeId("");
+      note = "Sides color is not editable yet (soon). The sides now follow the faceplate color.";
+    } else if (raw === "side" && part !== raw) note = "Sides color is not editable yet (soon).";
+    else if ((raw === "logo" || (raw === "bezel" && cur.badge !== null && cur.bezel !== null && cur.bezel !== NO_BEZEL)) && part !== raw) note = "Editing firmware badges is coming soon!";
+    if (note) setSoonAsk({ text: note });
+    setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
   function pickFaceplate() { pickFp("body"); }
   function pickKnob(s: Slot, part: "body" | "cap" = "body") { setSelKnob(s); setTarget({ k: "knob", slot: s, part }); scene.current?.focus(s); }
-  function clearSel() { setRadial(false); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); }
+  function clearSel() { setAllKnobs(false); setRadial(false); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); }
 
+  const snap = () => setHist((h) => [...h.slice(-49), { b: cloneBuild(build), id: themeId }]);
+  const undo = () => {
+    const l = hist[hist.length - 1];
+    if (!l) return;
+    setBuild(l.b); setThemeId(l.id); setHist(hist.slice(0, -1)); setSoonAsk(null);
+  };
+  // Everything the editor offers is editable. The parts it does not offer yet (sides color, firmware badge) stay as the theme
+  // has them: only trying to edit them gets the SOON notice (see pickFp).
   const edit = (fn: (b: Fm1Build) => void) => {
     const b = cloneBuild(build); fn(b);
-    const dropped = (b.side !== null && !FM1_FEATURES.sides) || ((b.badge !== null || b.logo !== null || (b.bezel !== null && b.bezel !== NO_BEZEL)) && !FM1_FEATURES.badge);
-    norm(b);
-    if (dropped) setFlashSoon((n) => n + 1);   // the part the editor does not offer yet is gone: the SOON tags flash
-    setBuild(b); setThemeId(""); };
+    snap(); setBuild(b); setThemeId(""); setSoonAsk(null); };
   // paints the selected part (what `target` points at) with a color, on the build it is given
   function paint(b: Fm1Build, id: string) {
     if (target.k === "fp") {
       if (target.part === "bezel") b.bezel = id;
       else if (target.part === "logo") b.logo = id;
       else if (target.part === "side") b.side = id;
-      else b[target.part] = id;
+      else { b[target.part] = id; if (target.part === "body" && !FM1_FEATURES.sides) b.side = null; }
     } else if (target.k === "group") {
       GROUPS[target.g].forEach((s) => { b.knobs[s][target.part] = id; });
-    } else b.knobs[target.slot][target.part] = id;
+    } else if (allKnobs) SLOTS.forEach((x) => { b.knobs[x][target.part] = id; });
+    else b.knobs[target.slot][target.part] = id;
   }
   const setColor = (id: string) => { setPreview(null); edit((b) => paint(b, id)); };
-  const applyAll = (slot: Slot) => edit((b) => { const k = { ...b.knobs[slot] }; SLOTS.forEach((x) => { b.knobs[x] = { ...k }; }); });
+  // "Affect all" only arms the mode: the NEXT model or color change goes to all 8 knobs (nothing is copied on check)
+  const toggleAll = (on: boolean) => setAllKnobs(on && !!selKnob);
   const setVariant = (slot: Slot, patch: Partial<Pick<Knob, "style" | "height">>) => edit((b) => {
-    const k = { ...b.knobs[slot], ...patch };
-    if (!variantOk(k.style, k.height)) k.height = "short";
-    b.knobs[slot] = k;
+    const apply = (x: Slot) => {
+      const k = { ...b.knobs[x], ...patch };
+      if (!variantOk(k.style, k.height)) k.height = "short";
+      b.knobs[x] = k;
+    };
+    if (allKnobs) SLOTS.forEach(apply); else apply(slot);
   });
+  // the arrows over the knob picture: previous / next model for the selected knob (same as picking it, wraps around)
+  const stepModel = (d: number) => {
+    if (!selKnob) return;
+    const k = build.knobs[selKnob];
+    const i = Math.max(0, MODELS.findIndex((m) => m.st === k.style && m.h === k.height));
+    const n = MODELS[(i + d + MODELS.length) % MODELS.length];
+    setVariant(selKnob, { style: n.st, height: n.h });
+  };
 
-  const loadBuild = (b: Fm1Build, id: string) => { setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
+  const loadBuild = (b: Fm1Build, id: string) => { snap(); setSoonAsk(null); setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
   const applyTheme = (id: string) => {
     const t = FIXED_THEMES.find((x) => x.id === id);
     if (t) return loadBuild(t.build, id);
@@ -263,10 +337,6 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
   return (
     <div>
-      <p className="mb-3 text-[11px] text-text-muted">
-        <span className="mono text-accent mr-2">BETA</span>
-        We are still finishing the Kustomizer, so you may notice small glitches. Thanks for your patience!
-      </p>
       {/* themes */}
       <div className="mb-5">
         <ThemeFilmstrip
@@ -307,6 +377,46 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
             <div className="pointer-events-none absolute left-3 top-3 bg-black/60 px-2.5 py-1.5">
               <span className="ks block text-xl leading-none text-white">{partLabel}</span>
             </div>
+            {hist.length > 0 && !selKnob && (
+              <button onClick={undo} title="Undo (Ctrl+Z)" className="absolute right-2 bottom-2 z-20 mono text-[11px] px-2.5 min-h-8 border border-border-light bg-[#0d0d0c]/85 text-text-primary hover:border-accent hover:text-accent cursor-pointer">↶ UNDO</button>
+            )}
+            {soonAsk && (
+              <div className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-3">
+                <div key={soonAsk.text} className="pointer-events-auto max-w-xs border-2 border-accent bg-[#0d0d0c]/95 px-4 py-3 text-center" style={{ animation: "soonBox 1.4s steps(1, end) 1" }}>
+                  <span className="mono text-[10px] text-accent tracking-wider">SOON</span>
+                  <p className="mt-1 text-sm text-text-primary">{soonAsk.text}</p>
+                </div>
+              </div>
+            )}
+            {/* your device color: a tab at the bottom center, click it and the choices slide up over the 3D view.
+                The current color lives on the tab, the others are in the drawer; picking one swaps them and the drawer stays open.
+                Clicking the tab or anywhere outside closes it. */}
+            <div ref={facRef} className="pointer-events-none absolute inset-x-0 bottom-0 z-30 overflow-hidden">
+              <div className="transition-transform duration-300 ease-out" style={{ transform: facOpen ? "translateY(0)" : "translateY(calc(100% - 32px))" }}>
+                <div className="flex justify-center">
+                  <button onClick={() => setFacOpen(!facOpen)} aria-label="Device color" aria-expanded={facOpen}
+                    className="pointer-events-auto group relative h-8 w-[190px] cursor-pointer">
+                    <svg viewBox="0 0 190 32" preserveAspectRatio="none" className="absolute inset-0 w-full h-full text-border-light group-hover:text-accent transition-colors" aria-hidden="true">
+                      <path d="M0 32 C16 32 18 1 34 1 L156 1 C172 1 174 32 190 32 Z" fill="rgba(13,13,12,0.45)" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <span className="relative flex h-full items-center justify-center gap-2 pt-0.5">
+                      <span className="w-5 h-5 rounded-[5px] border border-white/40" style={{ background: `linear-gradient(135deg, ${fac.body} 55%, ${fac.keys} 55%)` }} />
+                      <span className="mono text-[10px] tracking-wider text-white/55 group-hover:text-white/80 transition-colors">DEVICE COLOR</span>
+                    </span>
+                  </button>
+                </div>
+                <div className="pointer-events-auto border-t border-border-light bg-[#0d0d0c]/45 backdrop-blur-[3px] px-3 py-3">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {FACTORY_COLORS.filter((f) => f.id !== factory).map((f) => (
+                      <button key={f.id} title={f.name} aria-label={f.name} onClick={() => setFactory(f.id)}
+                        className="w-10 h-10 rounded-md border-2 border-border hover:border-accent cursor-pointer p-0.5 transition-colors">
+                        <span className="block w-full h-full rounded-sm" style={{ background: `linear-gradient(135deg, ${f.body} 55%, ${f.keys} 55%)` }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
             {radial && (
         <RadialColorMenu colors={target.k === "fp" ? colors.filter((c) => !c.knobsOnly) : colors} currentId={curId} title={targetLabel.replace(/^KNOBS? /, "").replace(" · ", " ")}
           onPick={(id) => setColor(id)} onPreview={setPreview} onClose={() => { setPreview(null); setRadial(false); }}>
@@ -332,53 +442,62 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                   {part === "body" ? "Body" : "Cap"}
                 </button>
               ))}
-              <button onClick={() => applyAll(selKnob)}
-                className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Apply to all</button>
             </>
           )}
         </RadialColorMenu>
       )}
-            {/* high quality picture of the selected knob, over the 3D view (only when renders exist, see public/renders/README.md) */}
-            {sel && selKnob && (
-              <div className="pointer-events-none absolute left-2 bottom-2 w-[42%] max-w-72">
-                <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={256} fluid />
-              </div>
-            )}
+            {/* the selected knob: its picture (renders only, see public/renders/README.md), a rounded triangle on each side to change the model, and its name */}
+            {sel && selKnob && (() => {
+              const spec = KNOB_SPECS[`${sel.style}_${sel.height}`];
+              // the base picture's plate is a diamond with its tips at 7% and 93% of the width, at 53% of the height:
+              // the triangles sit inside it, near the left and right tips, pointing out like the plate itself
+              const tri = "pointer-events-auto absolute w-10 h-10 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-accent hover:text-white active:scale-90 transition cursor-pointer drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]";
+              const Tri = ({ dir }: { dir: "l" | "r" }) => (
+                <svg viewBox="0 0 24 24" className="w-6 h-6" style={dir === "r" ? { transform: "scaleX(-1)" } : undefined} aria-hidden="true">
+                  <path d="M17 5 L6 12 L17 19 Z" fill="currentColor" stroke="currentColor" strokeWidth="3.4" strokeLinejoin="round" />
+                </svg>
+              );
+              return (
+                <div className="pointer-events-none absolute left-2 bottom-2 w-[42%] max-w-72">
+                  <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={256} fluid />
+                  <button onClick={() => stepModel(-1)} className={tri} style={{ left: "20%", top: "53%" }} aria-label="Previous knob model"><Tri dir="l" /></button>
+                  <button onClick={() => stepModel(1)} className={tri} style={{ left: "80%", top: "53%" }} aria-label="Next knob model"><Tri dir="r" /></button>
+                  <span className="ks absolute left-1/2 -translate-x-1/2 bottom-[7%] whitespace-nowrap bg-black/60 px-2 py-1 text-base leading-none text-white">{allKnobs && <span className="text-accent mr-1.5">ALL ·</span>}{spec?.name ?? `${sel.style} ${sel.height}`}</span>
+                </div>
+              );
+            })()}
           </div>
           <div className="mt-2 space-y-2">
+          {/* phone: the same two buttons, right under the 3D view instead of far below */}
+          {mode === "case" && !selKnob && (
+            <div className="lg:hidden flex flex-wrap items-center gap-2 text-xs" data-keep-radial>
+              {([["body", "Faceplate", shown.body], ["accent", FM1_FEATURES.badge ? "Accent" : "Accent + Bezel", shown.accent]] as const).map(([part, label, id]) => (
+                <button key={part} onClick={() => { pickFp(part); openRadial(); }}
+                  className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${target.k === "fp" && effPart(target.part) === part ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
+                  <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(id) }} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* knob card */}
           {sel && selKnob && (
             <section className="border border-border bg-surface-card p-2 sm:p-3">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
                 <span className="text-sm font-semibold text-text-primary">Knob {SLOT_NAME[selKnob]}</span>
-                <button className="text-xs text-text-muted cursor-pointer" onClick={clearSel}>Done</button>
+                {/* mode: every change goes to all 8 knobs (checking it copies this knob to the others first) */}
+                <label className={`inline-flex items-center gap-2 px-3 min-h-9 text-xs border cursor-pointer transition-colors ${allKnobs ? "border-accent text-accent" : "border-border text-text-muted hover:border-accent hover:text-accent"}`}>
+                  <input type="checkbox" checked={allKnobs} onChange={(e) => toggleAll(e.target.checked)} className="w-4 h-4 accent-[#FF5A1F] cursor-pointer" />
+                  Affect all
+                </label>
+                <div className="flex items-center gap-5">
+                  <button onClick={undo} disabled={hist.length === 0} title="Undo (Ctrl+Z)" className="mono text-xs text-text-muted hover:text-accent cursor-pointer disabled:opacity-30 disabled:cursor-default disabled:hover:text-text-muted">↶ UNDO</button>
+                  <button className="text-xs text-text-muted cursor-pointer" onClick={clearSel}>Done</button>
+                </div>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex gap-2 mb-2">
-                    {(["body", "cap"] as const).map((part) => (
-                      <button key={part} onClick={() => setTarget({ k: "knob", slot: selKnob, part })}
-                        className={`flex-1 py-2 text-sm border cursor-pointer min-h-11 ${isTarget({ k: "knob", slot: selKnob, part }) ? "border-accent text-accent" : "border-border text-text-muted"}`}>
-                        {part === "body" ? "Body" : "Cap"}
-                      </button>
-                    ))}
-                    {/* copies this knob (shape, body and cap color) to all the others */}
-                    <button onClick={() => { applyAll(selKnob); setAllDone(true); setTimeout(() => setAllDone(false), 1500); }}
-                      className="flex-1 py-2 text-sm border border-border text-text-muted cursor-pointer min-h-11 hover:border-accent hover:text-accent transition-colors">
-                      {allDone ? "Applied ✓" : "Apply to all"}
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {([["classic", "short", "Classic Short"], ["classic", "long", "Chalice"], ["groove", "short", "Groove Short"], ["groove", "long", "Groove Long"]] as const).map(([st, h, label]) => (
-                      <button key={label} onClick={() => setVariant(selKnob, { style: st, height: h })}
-                        onPointerEnter={() => setPeek(`${st}_${h}`)} onPointerLeave={() => setPeek(null)}
-                        className={`w-[72px] sm:w-[88px] aspect-square text-xs border cursor-pointer flex flex-col items-center justify-center gap-1 ${sel.style === st && sel.height === h ? "border-accent text-accent" : "border-border text-text-muted"}`}>
-                        <KnobRender style={st} height={h} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={60} />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  <KnobStats variant={peek ?? `${sel.style}_${sel.height}`} />
+                  <KnobStats variant={`${sel.style}_${sel.height}`} />
                   {(() => {
                     const sp = KNOB_SPECS[`${sel.style}_${sel.height}`];
                     return sp && (
@@ -387,6 +506,18 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                       </p>
                     );
                   })()}
+                </div>
+                <div className="flex flex-col justify-center gap-2 text-xs" data-keep-radial>
+                  {(["cap", "body"] as const).map((part) => {
+                    const on = target.k === "knob" && target.slot === selKnob && target.part === part;
+                    return (
+                      <button key={part} onClick={() => { setTarget({ k: "knob", slot: selKnob, part }); openRadial(); }}
+                        className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${on ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
+                        <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(sel[part]) }} />
+                        {part === "body" ? "Body color" : "Cap color"}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -428,25 +559,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
         {/* controls */}
         <div className="space-y-4 min-w-0">
-          <section>
-            <h3 className="font-mono text-[11px] font-medium tracking-wider text-text-muted mb-2">YOUR DEVICE COLOR</h3>
-            <div className="flex flex-wrap gap-2">
-              {FACTORY_COLORS.map((f) => (
-                <button
-                  key={f.id}
-                  title={f.name}
-                  aria-label={f.name}
-                  onClick={() => setFactory(f.id)}
-                  className={`w-11 h-11 rounded-lg border-2 cursor-pointer p-1 ${factory === f.id ? "border-accent" : "border-border"}`}
-                >
-                  <span className="block w-full h-full rounded" style={{ background: `linear-gradient(135deg, ${f.body} 55%, ${f.keys} 55%)` }} />
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-text-muted mt-1">Only for your preview, it is not part of the order code.</p>
-          </section>
-
-          <section className="bg-surface-card border border-border p-2 lg:w-4/5 lg:mr-auto" data-keep-radial>
+          <section className="bg-surface-card border border-border p-2 w-3/5 mx-auto sm:w-1/2 lg:w-4/5 lg:mx-0 lg:mr-auto" data-keep-radial>
             <Fm1TopView
               build={shown}
               tr={isT}
@@ -477,7 +590,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
           {/* the two color parts of the case as buttons (the accent is small and easy to miss), plus what is coming */}
           {mode === "case" && (
-            <div className="lg:w-4/5 lg:mr-auto flex flex-wrap items-center gap-2 text-xs" data-keep-radial>
+            <div className="hidden lg:flex lg:w-4/5 lg:mr-auto flex-wrap items-center gap-2 text-xs" data-keep-radial>
               {([["body", "Faceplate", shown.body], ["accent", FM1_FEATURES.badge ? "Accent" : "Accent + Bezel", shown.accent]] as const).map(([part, label, id]) => (
                 <button key={part} onClick={() => { pickFp(part); openRadial(); }}
                   className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${target.k === "fp" && effPart(target.part) === part ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
@@ -485,14 +598,6 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                   {label}
                 </button>
               ))}
-              {!FM1_FEATURES.sides && (
-                <span key={flashSoon} className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2"
-                  style={flashSoon > 0 ? { animation: "soonFlash 1.4s steps(1, end) 1" } : undefined}>SIDES COLOR · SOON</span>
-              )}
-              {!FM1_FEATURES.badge && (
-                <span key={`b${flashSoon}`} className="mono text-[10px] text-text-muted border border-dashed border-border px-2 py-2"
-                  style={flashSoon > 0 ? { animation: "soonFlash 1.4s steps(1, end) 1" } : undefined}>FIRMWARE BADGES · SOON</span>
-              )}
             </div>
           )}
 

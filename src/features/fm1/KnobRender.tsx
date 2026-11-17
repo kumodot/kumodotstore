@@ -31,6 +31,14 @@ const loadImg = (file: string) => {
   return p;
 };
 
+/** Loads every knob picture in the background, so switching models over the 3D view never flashes. */
+export function preloadKnobRenders() {
+  void loadManifest().then((m) => {
+    const files = [m.base, ...Object.values(m.caps), ...Object.values(m.knobs).flatMap((k) => [k.body, k.cap, k.inner])];
+    files.forEach((f) => { if (f) void loadImg(f).catch(() => {}); });
+  });
+}
+
 /** Multiplying by a very dark color kills all the shading (black x anything = black), so dark colors are lifted
  *  to a floor: black stays clearly black but its volume, grooves and highlights stay visible. */
 const FLOOR = 56;

@@ -37,6 +37,7 @@ export class Fm1Scene {
   private resumeTimer = 0;
   private tween: { t: number; fromP: THREE.Vector3; fromT: THREE.Vector3; toP: THREE.Vector3; toT: THREE.Vector3 } | null = null;
   private last = performance.now();
+  private demoAnim: { t0: number; ms: number; from: { th: number; ph: number; r: number }; to: { th: number; ph: number; r: number }; done: () => void } | null = null;
   private base: Record<string, THREE.Color> = {};
   // Selection hint: four corner brackets on the screen-space bounding box of the part being edited
   private hl: string[] = [];
@@ -428,6 +429,24 @@ export class Fm1Scene {
     this.tween = { t: 0, fromP: this.camera.position.clone(), fromT: this.controls.target.clone(), toP, toT };
   }
 
+  /** Studio demo: where a part is on screen (client pixels), for the fake cursor. */
+  screenOf(t: Slot | "faceplate"): { x: number; y: number } {
+    const k = t === "faceplate" ? { x: 0, z: 0 } : this.layout.knobs[t];
+    const v = new THREE.Vector3(k.x, t === "faceplate" ? 0 : 0.012, k.z).project(this.camera);
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  }
+
+  /** Studio demo: smooth orbit around the current target (azimuth, polar, zoom factor), resolves when done. */
+  demoOrbit(dAz: number, dPol: number, zoom: number, ms: number): Promise<void> {
+    this.controls.autoRotate = false;
+    window.clearTimeout(this.resumeTimer);
+    const sph = new THREE.Spherical().setFromVector3(this.camera.position.clone().sub(this.controls.target));
+    const from = { th: sph.theta, ph: sph.phi, r: sph.radius };
+    const to = { th: from.th + dAz, ph: Math.min(1.45, Math.max(0.2, from.ph + dPol)), r: Math.min(0.6, Math.max(0.06, from.r * zoom)) };
+    return new Promise((done) => { this.demoAnim = { t0: performance.now(), ms, from, to, done }; });
+  }
+
   /** PNG data URL of the finished look: overview camera, nothing glowing. */
   snapshot(): string {
     const saved = { hover: this.hoverNames, pos: this.camera.position.clone(), target: this.controls.target.clone() };
@@ -464,6 +483,14 @@ export class Fm1Scene {
       this.camera.position.lerpVectors(tw.fromP, tw.toP, e);
       this.controls.target.lerpVectors(tw.fromT, tw.toT, e);
       if (tw.t >= 1) this.tween = null;
+    }
+    if (this.demoAnim) {
+      const a = this.demoAnim;
+      const u = Math.min(1, (performance.now() - a.t0) / a.ms);
+      const e = u * u * (3 - 2 * u);
+      const sph = new THREE.Spherical(a.from.r + (a.to.r - a.from.r) * e, a.from.ph + (a.to.ph - a.from.ph) * e, a.from.th + (a.to.th - a.from.th) * e);
+      this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(sph));
+      if (u >= 1) { this.demoAnim = null; a.done(); }
     }
     this.paint();
     this.controls.update();

@@ -112,8 +112,19 @@ a[class*="bg-accent"]:hover { color: #0D0D0C; }
 [data-glitch] .g-lo, [data-glitch] .g-hi, [data-glitch] .g-hollow, [data-glitch] .g-slice { display: inline-block; }
 
 
+/* a product card of the top picker: the next theme fades in over the previous one */
+@keyframes pickFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pickOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* the notice box over the 3D view blinks its border a few times */
+@keyframes soonBox {
+  0%, 8%, 24%, 41%, 58%, 75%, 91%, 100% { border-color: #FF5A1F; box-shadow: none; }
+  16%, 50%, 83% { border-color: #fff; box-shadow: 0 0 0 4px #FF5A1F; }
+}
+
 /* a turned-off feature was clicked: its SOON tag flashes three times, hard to miss */
 @keyframes soonFlash {
   0%, 8%, 24%, 41%, 58%, 75%, 91%, 100% { background: transparent; color: #8c8a85; border-color: #FF5A1F; }
   16%, 50%, 83% { background: #FF5A1F; color: #0D0D0C; border-color: #FF5A1F; }
 }
+@keyframes demoPulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
