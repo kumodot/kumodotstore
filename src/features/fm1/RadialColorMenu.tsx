@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { swatchStyle } from "@/utils/swatch.ts";
 
 // Color menu docked in the bottom-right corner of the 3D view: always the same place, never over the part being
@@ -30,7 +30,8 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
   children?: React.ReactNode;   // buttons under the ring (Body / Cap / Apply to all)
 }) {
   const phone = typeof window !== "undefined" && window.innerWidth < 640;
-  const SW = phone ? 30 : 36;
+  const SW = phone ? 28 : 36;
+  const [hostH, setHostH] = useState(300);   // phone: height of the 3D view the columns have to fit in
   const spots = ringLayout(colors.length, SW, 2);
   const reach = Math.max(...spots.map((s) => s.r)) + SW / 2 + 4;
   const center = Math.round(Math.min(...spots.map((x) => x.r)) - SW / 2 - 3);   // the middle disc fills the ring, the name wraps inside
@@ -38,6 +39,10 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
   const [off, setOff] = useState({ x: 0, y: 0 });   // where the buyer dragged the menu to
   const [out, setOut] = useState(false);              // fan out from the center, fast
   const root = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const h = root.current?.parentElement?.clientHeight;
+    if (h) setHostH(h);
+  }, []);
   const keep = useRef(onClose);
   keep.current = onClose;
 
@@ -54,6 +59,43 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
   }, []);
 
   const shown = colors.find((c) => c.id === (hover ?? currentId));
+  if (phone) {
+    // columns along the right edge, filled top to bottom, the first column hugging the edge; a full column spills left
+    const STEP = SW + 3;
+    const foot = children ? 34 : 0;
+    const rows = Math.max(3, Math.floor((hostH - 16 - foot) / STEP));
+    const cols = Math.ceil(colors.length / rows);
+    const usedRows = Math.min(rows, colors.length);
+    const panelW = cols * STEP + 5;
+    return (
+      <div ref={root} role="dialog" aria-label={title} className="absolute inset-0 z-20 pointer-events-none">
+        <div className="absolute right-1 top-1 rounded-lg bg-[#0d0d0c]/55 backdrop-blur-[2px] pointer-events-auto"
+          style={{ width: panelW, height: usedRows * STEP + 5 }}>
+          {colors.map((c, i) => (
+            <button
+              key={c.id}
+              title={c.name}
+              aria-label={c.name}
+              onClick={() => { setHover(c.id); onPick(c.id); }}
+              className={`absolute rounded-full border-2 cursor-pointer ${currentId === c.id ? "border-accent" : "border-[#6b6a66]"}`}
+              style={{
+                width: SW, height: SW, ...swatchStyle(c),
+                right: 3 + Math.floor(i / rows) * STEP, top: 3 + (i % rows) * STEP,
+                opacity: out ? 1 : 0, transform: `scale(${out ? 1 : 0.4})`,
+                transition: `opacity 90ms ${i * 6}ms, transform 130ms ${i * 6}ms`,
+              }}
+            />
+          ))}
+        </div>
+        {/* what is being edited and the current color name, to the left of the columns */}
+        <div className="absolute top-1 bg-black/60 px-1.5 py-1 max-w-[92px] text-right" style={{ right: panelW + 8 }}>
+          <span className="mono block text-[8px] leading-tight text-text-muted break-words">{title}</span>
+          <span className="block text-[10px] leading-tight text-text-primary break-words">{shown?.name ?? ""}</span>
+        </div>
+        {children && <div className="absolute right-1 bottom-1 flex gap-1 whitespace-nowrap pointer-events-auto">{children}</div>}
+      </div>
+    );
+  }
   return (
     <div
       ref={root}
@@ -78,8 +120,8 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
                      justify-center text-center px-2 pointer-events-auto cursor-grab active:cursor-grabbing touch-none select-none"
           style={{ width: center * 2, height: center * 2 }}
         >
-          <span className="mono text-[9px] leading-tight text-text-muted break-words">{title}</span>
-          <span className="text-xs leading-tight text-text-primary mt-1 break-words">{shown?.name ?? ""}</span>
+          <span className="mono text-[8px] sm:text-[9px] leading-tight text-text-muted break-words">{title}</span>
+          <span className="text-[10px] sm:text-xs leading-tight text-text-primary mt-0.5 sm:mt-1 break-words">{shown?.name ?? ""}</span>
         </div>
         {colors.map((c, i) => {
           const s = spots[i];

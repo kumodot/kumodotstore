@@ -23,11 +23,11 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
 }) {
   const rail = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLElement>(null);
-  // stacked layout (phone, narrow window): the preview is below the strip, so after picking a theme
-  // scroll the strip to the top (under the sticky header) and the result shows right under it
+  // After picking a theme, always scroll the strip to the top (under the sticky header), on phone and desktop,
+  // so the preview shows right under it and the change is never left off screen
   const pick = (id: string) => {
     onSelect(id);
-    if (window.innerWidth < 1024) window.setTimeout(() => root.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+    window.setTimeout(() => root.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   };
   // Touch screens swipe the rail natively. Mouse gets drag-to-scroll too (it ignores snap while dragging).
   const drag = useRef<{ x: number; left: number } | null>(null);

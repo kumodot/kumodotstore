@@ -78,6 +78,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [msg, setMsg] = useState("");
   const [waitOpen, setWaitOpen] = useState(false);
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
+  const [specsOpen, setSpecsOpen] = useState(false);   // phone: knob specs are folded away ("curtain") by default
   const [facOpen, setFacOpen] = useState(false);   // the device-color drawer over the 3D view
   const facRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -331,7 +332,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     const svg = (children: ReactNode) => <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
     const chain = svg(<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></>);
     const broken = svg(<><path d="m18.84 12.25 1.72-1.71a5 5 0 0 0-.12-7.07 5 5 0 0 0-6.95 0l-1.72 1.71" /><path d="m5.17 11.75-1.71 1.71a5 5 0 0 0 .12 7.07 5 5 0 0 0 6.95 0l1.71-1.71" /><path d="M8 2v3M2 8h3M16 19v3M19 16h3" /></>);
-    const base = "inline-flex items-center gap-2 px-3 min-h-9 cursor-pointer";
+    const base = "inline-flex items-center gap-2 px-2 sm:px-3 min-h-8 sm:min-h-9 text-[11px] sm:text-xs cursor-pointer";
     const border = (sel: boolean) => (sel ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent");
     return (
       <>
@@ -426,19 +427,19 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
         {/* 3D */}
         <div className="sticky top-[73px] z-30 min-w-0 self-start bg-[#0d0d0c]/95 backdrop-blur pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:bg-transparent lg:backdrop-blur-none lg:top-[88px]">
           <div className="relative" data-keep-radial>
-            <div ref={host} className="w-full aspect-[4/3] max-h-[32vh] lg:max-h-none rounded-xl overflow-hidden border border-border bg-[#1f2125]" />
-            <span className="pointer-events-none absolute right-2 top-2 mono text-[8px] leading-none tracking-wider text-white/45">LOW-POLY PREVIEW · NOT FINAL QUALITY</span>
-            <div className="pointer-events-none absolute left-3 top-3 bg-black/60 px-2.5 py-1.5">
-              <span className="ks block text-xl leading-none text-white">{partLabel}</span>
+            <div ref={host} className="w-full h-[46vh] min-h-[280px] sm:h-auto sm:aspect-[4/3] sm:max-h-[32vh] lg:max-h-none rounded-xl overflow-hidden border border-border bg-[#1f2125]" />
+            <span className="pointer-events-none absolute right-2 top-2 hidden sm:block mono text-[8px] leading-none tracking-wider text-white/45">LOW-POLY PREVIEW · NOT FINAL QUALITY</span>
+            <div className="pointer-events-none absolute left-2 top-2 sm:left-3 sm:top-3 bg-black/60 px-2 py-1 sm:px-2.5 sm:py-1.5">
+              <span className="ks block text-sm sm:text-xl leading-none text-white">{partLabel}</span>
             </div>
             {hist.length > 0 && !selKnob && (
-              <button onClick={undo} title="Undo (Ctrl+Z)" className="absolute right-2 bottom-2 z-20 mono text-[11px] px-2.5 min-h-8 border border-border-light bg-[#0d0d0c]/85 text-text-primary hover:border-accent hover:text-accent cursor-pointer">↶ UNDO</button>
+              <button onClick={undo} title="Undo (Ctrl+Z)" className={`${radial ? "max-sm:hidden " : ""}absolute right-2 bottom-2 z-20 mono text-[10px] sm:text-[11px] px-2 sm:px-2.5 min-h-7 sm:min-h-8 border border-border-light bg-[#0d0d0c]/85 text-text-primary hover:border-accent hover:text-accent cursor-pointer`}>↶ UNDO</button>
             )}
             {soonAsk && (
               <div className="pointer-events-none absolute inset-x-0 top-3 z-40 flex justify-center px-3">
-                <div key={soonAsk.text} className="pointer-events-auto max-w-xs border-2 border-accent bg-[#0d0d0c]/95 px-4 py-3 text-center" style={{ animation: "soonBox 1.4s steps(1, end) 1" }}>
+                <div key={soonAsk.text} className="pointer-events-auto max-w-xs border-2 border-accent bg-[#0d0d0c]/95 px-3 py-2 sm:px-4 sm:py-3 text-center" style={{ animation: "soonBox 1.4s steps(1, end) 1" }}>
                   <span className="mono text-[10px] text-accent tracking-wider">SOON</span>
-                  <p className="mt-1 text-sm text-text-primary">{soonAsk.text}</p>
+                  <p className="mt-1 text-xs sm:text-sm text-text-primary">{soonAsk.text}</p>
                 </div>
               </div>
             )}
@@ -449,7 +450,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               <div className="transition-transform duration-300 ease-out" style={{ transform: facOpen ? "translateY(0)" : "translateY(calc(100% - 32px))" }}>
                 <div className="flex justify-center">
                   <button onClick={() => setFacOpen(!facOpen)} aria-label="Device color" aria-expanded={facOpen}
-                    className="pointer-events-auto group relative h-8 w-[190px] cursor-pointer">
+                    className="pointer-events-auto group relative h-7 w-[140px] sm:h-8 sm:w-[190px] cursor-pointer">
                     <svg viewBox="0 0 190 32" preserveAspectRatio="none" className="absolute inset-0 w-full h-full text-border-light group-hover:text-accent transition-colors" aria-hidden="true">
                       <path d="M0 32 C16 32 18 1 34 1 L156 1 C172 1 174 32 190 32 Z" fill="rgba(13,13,12,0.45)" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                     </svg>
@@ -475,24 +476,24 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
         <RadialColorMenu colors={target.k === "fp" ? colors.filter((c) => !c.knobsOnly) : colors} currentId={curId} title={targetLabel.replace(/^KNOBS? /, "").replace(" · ", " ")}
           onPick={(id) => setColor(id)} onPreview={setPreview} onClose={() => { setPreview(null); setRadial(false); }}>
           {mode === "case" && target.k === "fp" && target.part === "side" && build.side !== null && (
-            <button onClick={() => edit((b) => { b.side = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow faceplate</button>
+            <button onClick={() => edit((b) => { b.side = null; })} className="px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow faceplate</button>
           )}
           {mode === "case" && target.k === "fp" && target.part === "logo" && build.logo !== null && (
-            <button onClick={() => edit((b) => { b.logo = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Auto (black or white)</button>
+            <button onClick={() => edit((b) => { b.logo = null; })} className="px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Auto (black or white)</button>
           )}
           {mode === "case" && target.k === "fp" && (target.part === "accent" || target.part === "bezel") && (
-            <button onClick={() => edit((b) => { b.bezel = b.bezel === NO_BEZEL ? null : NO_BEZEL; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">
+            <button onClick={() => edit((b) => { b.bezel = b.bezel === NO_BEZEL ? null : NO_BEZEL; })} className="px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">
               {build.bezel === NO_BEZEL ? "Restore bezel" : "Delete bezel"}
             </button>
           )}
           {mode === "case" && target.k === "fp" && target.part === "bezel" && build.bezel !== null && build.bezel !== NO_BEZEL && (
-            <button onClick={() => edit((b) => { b.bezel = null; })} className="px-3 min-h-9 text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow labels</button>
+            <button onClick={() => edit((b) => { b.bezel = null; })} className="px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border border-border-light text-text-primary cursor-pointer bg-[#0d0d0c]/90">Follow labels</button>
           )}
           {target.k === "knob" && selKnob && (
             <>
               {(["body", "cap"] as const).map((part) => (
                 <button key={part} onClick={() => setTarget({ k: "knob", slot: selKnob, part })}
-                  className={`px-3 min-h-9 text-xs border cursor-pointer bg-[#0d0d0c]/90 ${isTarget({ k: "knob", slot: selKnob, part }) ? "border-accent text-accent" : "border-border-light text-text-primary"}`}>
+                  className={`px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border cursor-pointer bg-[#0d0d0c]/90 ${isTarget({ k: "knob", slot: selKnob, part }) ? "border-accent text-accent" : "border-border-light text-text-primary"}`}>
                   {part === "body" ? "Body" : "Cap"}
                 </button>
               ))}
@@ -505,18 +506,18 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               const spec = KNOB_SPECS[`${sel.style}_${sel.height}`];
               // the base picture's plate is a diamond with its tips at 7% and 93% of the width, at 53% of the height:
               // the triangles sit inside it, near the left and right tips, pointing out like the plate itself
-              const tri = "pointer-events-auto absolute w-10 h-10 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-accent hover:text-white active:scale-90 transition cursor-pointer drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]";
+              const tri = "pointer-events-auto absolute w-7 h-7 sm:w-10 sm:h-10 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-accent hover:text-white active:scale-90 transition cursor-pointer drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]";
               const Tri = ({ dir }: { dir: "l" | "r" }) => (
-                <svg viewBox="0 0 24 24" className="w-6 h-6" style={dir === "r" ? { transform: "scaleX(-1)" } : undefined} aria-hidden="true">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-6 sm:h-6" style={dir === "r" ? { transform: "scaleX(-1)" } : undefined} aria-hidden="true">
                   <path d="M17 5 L6 12 L17 19 Z" fill="currentColor" stroke="currentColor" strokeWidth="3.4" strokeLinejoin="round" />
                 </svg>
               );
               return (
-                <div className="pointer-events-none absolute left-2 bottom-2 w-[42%] max-w-72">
+                <div className="pointer-events-none absolute left-2 bottom-2 w-[30%] sm:w-[42%] max-w-72">
                   <KnobRender style={sel.style} height={sel.height} slot={selKnob} body={hex(sel.body)} cap={hex(sel.cap)} bodyT={isT(sel.body)} capT={isT(sel.cap)} size={256} fluid />
                   <button onClick={() => stepModel(-1)} className={tri} style={{ left: "20%", top: "53%" }} aria-label="Previous knob model"><Tri dir="l" /></button>
                   <button onClick={() => stepModel(1)} className={tri} style={{ left: "80%", top: "53%" }} aria-label="Next knob model"><Tri dir="r" /></button>
-                  <span className="ks absolute left-1/2 -translate-x-1/2 bottom-[7%] whitespace-nowrap bg-black/60 px-2 py-1 text-base leading-none text-white">{allKnobs && <span className="text-accent mr-1.5">ALL ·</span>}{spec?.name ?? `${sel.style} ${sel.height}`}</span>
+                  <span className="ks absolute left-1/2 -translate-x-1/2 bottom-[7%] whitespace-nowrap bg-black/60 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-base leading-none text-white">{allKnobs && <span className="text-accent mr-1.5">ALL ·</span>}{spec?.name ?? `${sel.style} ${sel.height}`}</span>
                 </div>
               );
             })()}
@@ -535,7 +536,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
                 <span className="text-sm font-semibold text-text-primary">Knob {SLOT_NAME[selKnob]}</span>
                 {/* mode: every change goes to all 8 knobs (checking it copies this knob to the others first) */}
-                <label className={`inline-flex items-center gap-2 px-3 min-h-9 text-xs border cursor-pointer transition-colors ${allKnobs ? "border-accent text-accent" : "border-border text-text-muted hover:border-accent hover:text-accent"}`}>
+                <label className={`inline-flex items-center gap-2 px-2 sm:px-3 min-h-7 sm:min-h-9 text-[11px] sm:text-xs border cursor-pointer transition-colors ${allKnobs ? "border-accent text-accent" : "border-border text-text-muted hover:border-accent hover:text-accent"}`}>
                   <input type="checkbox" checked={allKnobs} onChange={(e) => toggleAll(e.target.checked)} className="w-4 h-4 accent-[#FF5A1F] cursor-pointer" />
                   Affect all
                 </label>
@@ -544,8 +545,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                   <button className="text-xs text-text-muted cursor-pointer" onClick={clearSel}>Done</button>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-3">
+                <div className={`${specsOpen ? "block" : "hidden"} sm:block order-2 sm:order-1 basis-full sm:basis-auto sm:flex-1 min-w-0`}>
                   <KnobStats variant={`${sel.style}_${sel.height}`} />
                   {(() => {
                     const sp = KNOB_SPECS[`${sel.style}_${sel.height}`];
@@ -556,17 +557,21 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                     );
                   })()}
                 </div>
-                <div className="flex flex-col justify-center gap-2 text-xs" data-keep-radial>
+                <div className="order-1 sm:order-2 flex flex-row sm:flex-col w-full sm:w-auto justify-center gap-2 text-xs" data-keep-radial>
                   {(["cap", "body"] as const).map((part) => {
                     const on = target.k === "knob" && target.slot === selKnob && target.part === part;
                     return (
                       <button key={part} onClick={() => { setTarget({ k: "knob", slot: selKnob, part }); openRadial(); }}
-                        className={`inline-flex items-center gap-2 px-3 min-h-9 border cursor-pointer ${on ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
+                        className={`inline-flex flex-1 sm:flex-none items-center justify-center sm:justify-start gap-2 px-2 sm:px-3 min-h-8 sm:min-h-9 border cursor-pointer ${on ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
                         <span className="w-4 h-4 rounded-full border border-white/40" style={{ background: hex(sel[part]) }} />
                         {part === "body" ? "Body color" : "Cap color"}
                       </button>
                     );
                   })}
+                  <button onClick={() => setSpecsOpen(!specsOpen)} aria-expanded={specsOpen}
+                    className="sm:hidden px-2 min-h-8 border border-border-light text-[11px] text-text-muted hover:text-accent cursor-pointer">
+                    Specs {specsOpen ? "▴" : "▾"}
+                  </button>
                 </div>
               </div>
             </section>
