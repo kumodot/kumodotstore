@@ -69,8 +69,15 @@ export function RadialColorMenu({ colors, currentId, title, onPick, onPreview, o
     const panelW = cols * STEP + 5;
     return (
       <div ref={root} role="dialog" aria-label={title} className="absolute inset-0 z-20 pointer-events-none">
-        <div className="absolute right-1 top-1 rounded-lg bg-[#0d0d0c]/55 backdrop-blur-[2px] pointer-events-auto"
+        <div className="absolute right-1 top-1 pointer-events-auto"
           style={{ width: panelW, height: usedRows * STEP + 5 }}>
+          {/* dark base only around the swatches: a soft blob (solid discs, one shared opacity, a little blur) */}
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ opacity: 0.6, filter: "blur(2px)" }}>
+            {colors.map((c, i) => (
+              <span key={c.id} className="absolute rounded-full bg-[#0d0d0c]"
+                style={{ width: SW + 10, height: SW + 10, right: 3 + Math.floor(i / rows) * STEP - 5, top: 3 + (i % rows) * STEP - 5 }} />
+            ))}
+          </div>
           {colors.map((c, i) => (
             <button
               key={c.id}

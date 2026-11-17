@@ -546,7 +546,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                 </div>
               </div>
               <div className="flex flex-wrap sm:flex-nowrap gap-2 sm:gap-3">
-                <div className={`${specsOpen ? "block" : "hidden"} sm:block order-2 sm:order-1 basis-full sm:basis-auto sm:flex-1 min-w-0`}>
+                <div className={`grid sm:block transition-[grid-template-rows] duration-300 ease-out ${specsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"} order-2 sm:order-1 basis-full sm:basis-auto sm:flex-1 min-w-0`}>
+                  <div className="overflow-hidden min-h-0">
                   <KnobStats variant={`${sel.style}_${sel.height}`} />
                   {(() => {
                     const sp = KNOB_SPECS[`${sel.style}_${sel.height}`];
@@ -556,6 +557,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                       </p>
                     );
                   })()}
+                  </div>
                 </div>
                 <div className="order-1 sm:order-2 flex flex-row sm:flex-col w-full sm:w-auto justify-center gap-2 text-xs" data-keep-radial>
                   {(["cap", "body"] as const).map((part) => {
