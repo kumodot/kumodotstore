@@ -39,3 +39,6 @@ tools/fm1Code.check.ts
 tools/make_knob_render.py
 push-store-mode.bat
 eslint.config.js
+
+# raw Max export (never commit the studio models)
+public/models/*_preview_*v0.8*.glb

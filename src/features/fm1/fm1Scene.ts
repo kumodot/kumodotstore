@@ -21,6 +21,8 @@ export interface SceneLayout {
 }
 export interface Factory { body: string; keys: string }
 
+/** The case parts that slide away in "hide faceplate" (the knobs stay). */
+const isKitPart = (n: string) => n === "faceplate_body" || n === "faceplate_side" || n === "faceplate_accent_labels" || n.startsWith("bezel_");
 const KNOB_RE = /^knob_(\w+?)_(classic|groove)_(short|long)_(body|cap|inner)(?:_(slot|pointer|drop))?$/;   // inner = the black core seen through translucent knobs
 const HOME = { pos: new THREE.Vector3(0, 0.15, 0.19), target: new THREE.Vector3(0, 0, 0) };
 
@@ -44,6 +46,12 @@ export class Fm1Scene {
   private applied: { b: Fm1Build; f: Factory } | null = null;   // to redraw when a logo finishes loading
   private logoTex = new Map<string, THREE.CanvasTexture>();
   private logoQuad: THREE.Mesh | null = null;
+  // "hide faceplate": the plate, sides, labels and bezels slide up (model Y) until they are out of the frame, then are hidden
+  private lift = 0;
+  private liftTo = 0;
+  private liftDist = 0.4;
+  private liftHidden = false;     // fully away: the parts are not visible at all
+  private snapBack = false;       // the return from fully away: fast, then a slow seat and a click
   private deviceShadow: THREE.Mesh | null = null;   // soft fake shadow under the device
   private contactShadows: THREE.Mesh[] = [];          // a soft dark spot on the plate under each knob
   private overlay!: SVGSVGElement;
@@ -145,7 +153,7 @@ export class Fm1Scene {
     if (overrideUrl) await this.mergeOverrides(overrideUrl, gltf.scene);
     // thin outlines for the parts that turn into a ghost in knobs-only mode
     for (const m of this.meshes) {
-      if (!["fm1_device_body", "fm1_keys", "fm1_screen"].includes(m.name)) continue;
+      if (!["fm1_device_body", "fm1_keys", "keys_base", "fm1_screen"].includes(m.name)) continue;
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(m.geometry, 25),
         new THREE.LineBasicMaterial({ color: 0xb8bcc4, transparent: true, opacity: 0.6 }),
@@ -345,7 +353,8 @@ export class Fm1Scene {
       else if (n === "bezel_jiant") vis = b.badge !== null && bezelType === "jiant";
       else if (n.startsWith("bezel_logo_")) vis = n === plateName;
       if (noBezel && n.startsWith("bezel_")) vis = false;
-      if (!caseMode && !n.startsWith("knob_") && !["fm1_device_body", "fm1_keys", "fm1_screen"].includes(n)) vis = false;
+      if (this.liftHidden && isKitPart(n)) vis = false;
+      if (!caseMode && !n.startsWith("knob_") && !["fm1_device_body", "fm1_keys", "keys_base", "fm1_screen"].includes(n)) vis = false;
       const k = KNOB_RE.exec(n);
       if (k) {
         const kn = b.knobs[k[1] as Slot];
@@ -476,6 +485,93 @@ export class Fm1Scene {
     this.renderer.domElement.remove();
   }
 
+  /** Slide the case parts (faceplate, sides, labels, bezels) up and away, or bring them back. */
+  setKitLifted(on: boolean) {
+    if ((on ? 1 : 0) === this.liftTo) return;
+    this.liftTo = on ? 1 : 0;
+    // far enough to be out of the frame whatever the zoom: about 0.9x the camera distance, along the model's up axis
+    if (on) this.swoosh();
+    if (on) this.liftDist = Math.max(0.25, this.camera.position.distanceTo(this.controls.target) * 0.9);
+    if (!on && this.liftHidden && this.applied) {            // visible again before it comes back down
+      this.liftHidden = false; this.snapBack = true;
+      this.apply(this.applied.b, this.applied.f);
+    }
+  }
+
+  /** A light "swoosh" while the case leaves: soft noise through a band that sweeps up, fading out. */
+  private swoosh() {
+    try {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      const dur = 0.45;
+      const n = Math.floor(ctx.sampleRate * dur);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 0.8;
+      f.frequency.setValueAtTime(500, ctx.currentTime);
+      f.frequency.exponentialRampToValueAtTime(3200, ctx.currentTime + dur);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+      src.connect(f).connect(g).connect(ctx.destination);
+      src.onended = () => void ctx.close();
+      src.start();
+    } catch { /* no audio */ }
+  }
+
+  /** A tiny synthesized "click" for the moment the case seats (a few ms of filtered noise). */
+  private click() {
+    try {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const ctx = new AC();
+      const n = Math.floor(ctx.sampleRate * 0.035);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 5);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2400; f.Q.value = 0.9;
+      const g = ctx.createGain(); g.gain.value = 0.35;
+      src.connect(f).connect(g).connect(ctx.destination);
+      src.onended = () => void ctx.close();
+      src.start();
+    } catch { /* no audio: the snap still shows */ }
+  }
+
+  private stepLift(dt: number) {
+    if (this.lift === this.liftTo) return;
+    const dir = this.liftTo > this.lift ? 1 : -1;
+    this.lift = Math.min(1, Math.max(0, this.lift + dir * dt / (this.snapBack ? 0.65 : 0.7)));
+    if (Math.abs(this.lift - this.liftTo) < 1e-4) this.lift = this.liftTo;
+    let e = this.lift * this.lift * (3 - 2 * this.lift);
+    if (this.snapBack) {
+      // coming back: a fast drop that brakes and almost stops half a side-piece height (9 mm) above the seat, a short pause, then the last bit drifts in
+      // slowly and speeds up a little into the seat, like a magnet, and the click when it lands
+      const q = 1 - this.lift;                    // 0 = away, 1 = seated
+      const A = 0.22, H = 0.34;                   // fast drop ends at 22% of the time, the pause at 34%
+      const rest = Math.min(0.3, 0.009 / this.liftDist);   // it stops 9 mm above the seat: half the height of the side piece (1.77 cm)
+      if (q < A) e = 1 - (1 - rest) * (1 - Math.pow(1 - q / A, 3));
+      else if (q < H) e = rest;
+      else e = rest * (1 - Math.pow((q - H) / (1 - H), 1.8));
+    }
+    for (const m of this.meshes) {
+      if (!isKitPart(m.name)) continue;
+      const y0: number = m.userData.y0 ?? (m.userData.y0 = m.position.y);
+      m.position.y = y0 + e * this.liftDist;
+      m.userData.box = undefined;   // the bracket box is measured again where the part is now
+    }
+    if (this.logoQuad && this.lift > 0) this.logoQuad.visible = false;
+    if (this.lift >= 1) {
+      this.liftHidden = true;
+      for (const m of this.meshes) if (isKitPart(m.name)) m.visible = false;   // out of the frame: hidden, a zoom out will not show it
+    } else if (this.lift === 0) {
+      if (this.snapBack) { this.snapBack = false; this.click(); }
+      if (this.applied) this.apply(this.applied.b, this.applied.f);            // back home: the logo overlay returns
+    }
+  }
+
   private step() {
     const now = performance.now();
     const dt = Math.min(0.05, (now - this.last) / 1000);
@@ -496,6 +592,7 @@ export class Fm1Scene {
       this.camera.position.copy(this.controls.target).add(new THREE.Vector3().setFromSpherical(sph));
       if (u >= 1) { this.demoAnim = null; a.done(); }
     }
+    this.stepLift(dt);
     this.paint();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -516,6 +613,7 @@ export class Fm1Scene {
     let any = false;
     for (const m of this.meshes) {
       if (!m.visible || !names.has((m.material as THREE.Material).name)) continue;
+      if (this.lift > 0 && isKitPart(m.name)) continue;   // sliding away: no bracket on a part that is leaving
       const b: THREE.Box3 = m.userData.box ?? (m.userData.box = new THREE.Box3().setFromObject(m));
       box.union(b);
       any = true;

@@ -31,7 +31,7 @@ type Target =
   | { k: "group"; g: "L" | "R"; part: "body" | "cap" }
   | { k: "knob"; slot: Slot; part: "body" | "cap" };
 
-const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_site_v0.7.glb`;
+const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_site_v0.87.glb`;
 // optional: a file with a few new or replaced parts, only used if it exists (see Fm1Scene.mergeOverrides)
 const GLB_OVERRIDES = `${import.meta.env.BASE_URL}models/FM1_Kz_overrides.glb`;
 const cloneBuild = (b: Fm1Build): Fm1Build => JSON.parse(JSON.stringify(b));
@@ -79,6 +79,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [waitOpen, setWaitOpen] = useState(false);
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [specsOpen, setSpecsOpen] = useState(false);   // phone: knob specs are folded away ("curtain") by default
+  const [kitUp, setKitUp] = useState(false);   // "hide faceplate": the case slides up to show the bare device (view only)
   const [facOpen, setFacOpen] = useState(false);   // the device-color drawer over the 3D view
   const facRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -170,6 +171,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     if (hover?.slot) return `KNOB ${SLOT_NAME[hover.slot]}${hover.part ? ` · ${hover.part === "body" ? "BODY" : "CAP"}` : ""}`;
     return targetLabel;
   }, [targetLabel, hover]);
+  useEffect(() => { scene.current?.setKitLifted(kitUp); }, [kitUp]);
+  useEffect(() => { setKitUp(false); }, [build, mode]);   // touching the case (a theme, a color, a part) brings it back
   useEffect(() => { scene.current?.setHover(hover?.names ?? []); }, [hover]);
   useEffect(() => { scene.current?.highlight(hlNames); }, [hlNames]);
   // the notice goes away by itself
@@ -456,12 +459,18 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
                     </svg>
                     <span className="relative flex h-full items-center justify-center gap-2 pt-0.5">
                       <span className="w-5 h-5 rounded-[5px] border border-white/40" style={{ background: `linear-gradient(135deg, ${fac.body} 55%, ${fac.keys} 55%)` }} />
-                      <span className="mono text-[10px] tracking-wider text-white/55 group-hover:text-white/80 transition-colors">DEVICE COLOR</span>
+                      <span className="mono text-[10px] tracking-wider text-white/55 group-hover:text-white/80 transition-colors">DEVICE COLOR{kitUp && <span className="text-accent"> · BARE</span>}</span>
                     </span>
                   </button>
                 </div>
                 <div className="pointer-events-auto border-t border-border-light bg-[#0d0d0c]/45 backdrop-blur-[3px] px-3 py-3">
                   <div className="flex flex-wrap items-center justify-center gap-2">
+                    {mode === "case" && (
+                      <button onClick={() => setKitUp(!kitUp)} aria-pressed={kitUp}
+                        className={`inline-flex items-center gap-2 px-2 sm:px-3 min-h-9 text-[11px] sm:text-xs border cursor-pointer transition-colors ${kitUp ? "border-accent text-accent" : "border-border-light text-text-primary hover:border-accent"}`}>
+                        {kitUp ? "Show faceplate" : "Hide faceplate"}
+                      </button>
+                    )}
                     {FACTORY_COLORS.filter((f) => f.id !== factory).map((f) => (
                       <button key={f.id} title={f.name} aria-label={f.name} onClick={() => setFactory(f.id)}
                         className="w-10 h-10 rounded-md border-2 border-border hover:border-accent cursor-pointer p-0.5 transition-colors">
