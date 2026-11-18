@@ -453,11 +453,11 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               <div className="transition-transform duration-300 ease-out" style={{ transform: facOpen ? "translateY(0)" : "translateY(calc(100% - 32px))" }}>
                 <div className="flex justify-center">
                   <button onClick={() => setFacOpen(!facOpen)} aria-label="Device color" aria-expanded={facOpen}
-                    className="pointer-events-auto group relative h-7 w-[140px] sm:h-8 sm:w-[190px] cursor-pointer">
+                    className="pointer-events-auto group relative h-7 min-w-[140px] sm:h-8 sm:min-w-[190px] px-7 sm:px-9 cursor-pointer">
                     <svg viewBox="0 0 190 32" preserveAspectRatio="none" className="absolute inset-0 w-full h-full text-border-light group-hover:text-accent transition-colors" aria-hidden="true">
                       <path d="M0 32 C16 32 18 1 34 1 L156 1 C172 1 174 32 190 32 Z" fill="rgba(13,13,12,0.45)" stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                     </svg>
-                    <span className="relative flex h-full items-center justify-center gap-2 pt-0.5">
+                    <span className="relative flex h-full items-center justify-center gap-2 pt-0.5 whitespace-nowrap">
                       <span className="w-5 h-5 rounded-[5px] border border-white/40" style={{ background: `linear-gradient(135deg, ${fac.body} 55%, ${fac.keys} 55%)` }} />
                       <span className="mono text-[10px] tracking-wider text-white/55 group-hover:text-white/80 transition-colors">DEVICE COLOR{kitUp && <span className="text-accent"> · BARE</span>}</span>
                     </span>

@@ -50,6 +50,8 @@ export class Fm1Scene {
   private lift = 0;
   private liftTo = 0;
   private liftDist = 0.4;
+  private ripple: THREE.Mesh | null = null;   // the glow ring that spreads from under the device when the case clicks in
+  private rippleT = -1;
   private liftHidden = false;     // fully away: the parts are not visible at all
   private snapBack = false;       // the return from fully away: fast, then a slow seat and a click
   private deviceShadow: THREE.Mesh | null = null;   // soft fake shadow under the device
@@ -522,6 +524,39 @@ export class Fm1Scene {
     } catch { /* no audio */ }
   }
 
+  /** A ring of light gray (lighter than the background) spreads from under the device, like a drop in water, and fades. */
+  private startRipple() {
+    if (!this.ripple) {
+      // the ring has the shape of the case: a rounded rectangle (16.4 x 9.9 cm, small fillets), soft edges
+      const cv = document.createElement("canvas"); cv.width = 512; cv.height = 340;
+      const x = cv.getContext("2d")!;
+      x.strokeStyle = "#fff"; x.lineWidth = 12; x.shadowColor = "#fff"; x.shadowBlur = 16;
+      x.beginPath(); x.roundRect(40, 40, 432, 260, 24); x.stroke();
+      const tex = new THREE.CanvasTexture(cv);
+      const mat = new THREE.MeshBasicMaterial({ map: tex, color: 0xc9cdd4, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, side: THREE.DoubleSide });
+      this.ripple = new THREE.Mesh(new THREE.PlaneGeometry(0.1944, 0.129), mat);   // the drawn rectangle is exactly the device outline at scale 1
+      this.ripple.rotation.x = -Math.PI / 2;
+      this.ripple.position.y = -0.0198;                // just under the device body
+      this.ripple.raycast = () => {};
+      this.ripple.visible = false;
+      this.scene.add(this.ripple);
+    }
+    this.rippleT = 0;
+  }
+
+  private stepRipple(dt: number) {
+    const r = this.ripple;
+    if (!r || this.rippleT < 0) return;
+    this.rippleT += dt / 0.75;
+    const t = Math.min(1, this.rippleT);
+    const grow = 1 - Math.pow(1 - t, 2.2);          // fast start, then it slows as it spreads
+    const k = 0.55 + 2.15 * grow;                   // starts smaller than the device (hidden under it), comes out past its edges
+    r.scale.set(k, k, 1);
+    (r.material as THREE.MeshBasicMaterial).opacity = 0.85 * Math.pow(1 - t, 2.2);   // strong at the start, fading out together with the spread
+    r.visible = true;
+    if (t >= 1) { this.rippleT = -1; r.visible = false; }
+  }
+
   /** A tiny synthesized "click" for the moment the case seats (a few ms of filtered noise). */
   private click() {
     try {
@@ -533,11 +568,19 @@ export class Fm1Scene {
       for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 5);
       const src = ctx.createBufferSource(); src.buffer = buf;
       const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 2400; f.Q.value = 0.9;
-      const g = ctx.createGain(); g.gain.value = 0.35;
+      const g = ctx.createGain(); g.gain.value = 0.85;
       src.connect(f).connect(g).connect(ctx.destination);
+      // a short low thump under the click: the plate seating on the body
+      const o = ctx.createOscillator(); o.type = "sine";
+      o.frequency.setValueAtTime(170, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(70, ctx.currentTime + 0.09);
+      const og = ctx.createGain();
+      og.gain.setValueAtTime(0.5, ctx.currentTime); og.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.11);
+      o.connect(og).connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.12);
       src.onended = () => void ctx.close();
       src.start();
     } catch { /* no audio: the snap still shows */ }
+    this.startRipple();
   }
 
   private stepLift(dt: number) {
@@ -593,6 +636,7 @@ export class Fm1Scene {
       if (u >= 1) { this.demoAnim = null; a.done(); }
     }
     this.stepLift(dt);
+    this.stepRipple(dt);
     this.paint();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
