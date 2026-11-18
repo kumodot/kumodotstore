@@ -172,6 +172,11 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     return targetLabel;
   }, [targetLabel, hover]);
   useEffect(() => { scene.current?.setKitLifted(kitUp); }, [kitUp]);
+  const prevTheme = useRef(themeId);
+  useEffect(() => {   // picking another theme: the new case drops onto the device
+    if (themeId && themeId !== prevTheme.current) scene.current?.dropIn();
+    prevTheme.current = themeId;
+  }, [themeId]);
   useEffect(() => { setKitUp(false); }, [build, mode]);   // touching the case (a theme, a color, a part) brings it back
   useEffect(() => { scene.current?.setHover(hover?.names ?? []); }, [hover]);
   useEffect(() => { scene.current?.highlight(hlNames); }, [hlNames]);

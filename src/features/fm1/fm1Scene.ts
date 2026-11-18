@@ -583,6 +583,13 @@ export class Fm1Scene {
     this.startRipple();
   }
 
+  /** A new theme: the new case appears 3 cm above the device and drops on with the same snap (brake, drift, click, ring). */
+  dropIn() {
+    if (this.lift > 0 || this.liftTo > 0) return;   // already away or moving: the normal return handles it
+    this.liftDist = 0.03;
+    this.lift = 1; this.liftTo = 0; this.liftHidden = false; this.snapBack = true;
+  }
+
   private stepLift(dt: number) {
     if (this.lift === this.liftTo) return;
     const dir = this.liftTo > this.lift ? 1 : -1;
@@ -605,7 +612,6 @@ export class Fm1Scene {
       m.position.y = y0 + e * this.liftDist;
       m.userData.box = undefined;   // the bracket box is measured again where the part is now
     }
-    if (this.logoQuad && this.lift > 0) this.logoQuad.visible = false;
     if (this.lift >= 1) {
       this.liftHidden = true;
       for (const m of this.meshes) if (isKitPart(m.name)) m.visible = false;   // out of the frame: hidden, a zoom out will not show it
