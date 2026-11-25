@@ -49,6 +49,11 @@ export function Navbar() {
                 <Scramble text={item.label} />
               </Link>
             ))}
+            {import.meta.env.DEV && (
+              <Link to="/admin_k9x7m" className={`font-mono text-xs uppercase tracking-[.06em] transition-colors ${location.pathname.startsWith("/admin_k9x7m") ? "text-accent" : "text-accent/70 hover:text-accent"}`}>
+                Studio
+              </Link>
+            )}
             <a
               href={SITE.etsyUrl}
               target="_blank"
@@ -146,6 +151,11 @@ export function Navbar() {
                 <Scramble text={item.label} />
               </Link>
             ))}
+            {import.meta.env.DEV && (
+              <Link to="/admin_k9x7m" onClick={() => setMobileOpen(false)} className="block py-2 font-mono text-xs uppercase tracking-[.06em] text-accent">
+                Studio
+              </Link>
+            )}
             <a
               href={SITE.etsyUrl}
               target="_blank"

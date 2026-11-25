@@ -3,11 +3,14 @@
 import { bezelId, decodeFm1, GROUPS, NO_BEZEL, SLOT_NAME, type Fm1Build, type Knob, type Slot } from "./fm1Code.ts";
 import { firmwareById } from "../../data/firmwares.ts";
 import { logoColor } from "./fm1Color.ts";
+import { EXTRA_KNOBS } from "../../data/fm1Knobs.ts";
+import { hasCap } from "../../data/knobAvailability.ts";
 
 export interface PartColor { id: string; name: string; hex: string; translucent?: boolean }
 
 const MODEL: Record<string, string> = {
   classic_short: "Classic Short", classic_long: "Chalice", groove_short: "Groove Short", groove_long: "Groove Long",
+  ...Object.fromEntries(EXTRA_KNOBS.map((k) => [`${k.style}_${k.height}`, k.name])),
 };
 
 /** The packing list as text lines. Throws Error with a readable message when the code is not valid. */
@@ -44,7 +47,8 @@ export function fm1PartsList(code: string, colors: PartColor[]): string[] {
     const vol = s === "vol";
     const bk = `${vol ? "VOL " : ""}${MODEL[`${k.style}_${k.height}`]}, ${name(k.body)}`;
     const ck = `${vol ? "VOL cap" : "cap"}, ${name(k.cap)}`;
-    for (const [m, key] of [[bodies, bk], [caps, ck]] as const) {
+    const capped = hasCap(k.style, k.height);   // a model that takes no cap: nothing to pick for the cap
+    for (const [m, key] of (capped ? [[bodies, bk], [caps, ck]] : [[bodies, bk]]) as [typeof bodies, string][]) {
       const e = m.get(key) ?? { n: 0, at: [] };
       e.n++; e.at.push(SLOT_NAME[s]); m.set(key, e);
     }
@@ -53,5 +57,6 @@ export function fm1PartsList(code: string, colors: PartColor[]): string[] {
   for (const [k, e] of bodies) out.push(`- ${e.n}x ${k} (${e.at.join(", ")})`);
   out.push("KNOB CAPS:");
   for (const [k, e] of caps) out.push(`- ${e.n}x ${k} (${e.at.join(", ")})`);
+  if (caps.size === 0) out.push("- none (these models take no cap)");
   return out;
 }

@@ -35,3 +35,12 @@ export const studioStatus = () => call<StudioStatus>("/status", "GET");
 export interface PublishResult { ok: boolean; nothing?: boolean; steps: { name: string; ok: boolean; out: string }[] }
 export const studioPublish = () => call<PublishResult>("/publish", "POST", {});
 export const studioDiscard = () => call<{ ok: boolean }>("/discard", "POST", {});
+
+/** Save an uploaded file under public/ (only models/knobs/*.glb, renders/*.webp|png and renders/manifest.json). */
+export async function studioAsset(file: string, data: ArrayBuffer): Promise<boolean> {
+  const bytes = new Uint8Array(data);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  const r = await call<{ ok: boolean }>("/asset", "POST", { file, base64: btoa(bin) });
+  return !!r?.ok;
+}

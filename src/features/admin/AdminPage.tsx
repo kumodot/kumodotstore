@@ -11,8 +11,9 @@ import { StoreModeAdmin } from "./StoreModeAdmin.tsx";
 import { StudioBar } from "./StudioBar.tsx";
 import { Fm1ThemesAdmin } from "./Fm1ThemesAdmin.tsx";
 import { OrderDecoderAdmin } from "./OrderDecoderAdmin.tsx";
+import { Fm1KnobsAdmin } from "./Fm1KnobsAdmin.tsx";
 
-type Tab = "colors" | "products" | "templates" | "fm1themes" | "decoder" | "shipping" | "configurators" | "storemode";
+type Tab = "colors" | "products" | "templates" | "fm1themes" | "fm1knobs" | "decoder" | "shipping" | "configurators" | "storemode";
 
 // The Telegram test button is gone: Telegram is switched off (see _backend/Code.gs, TELEGRAM_ENABLED).
 
@@ -70,7 +71,7 @@ export function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-border">
-        {(["colors", "products", "templates", "fm1themes", "decoder", "shipping", "configurators", "storemode"] as Tab[]).map((t) => (
+        {(["colors", "products", "templates", "fm1themes", "fm1knobs", "decoder", "shipping", "configurators", "storemode"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -84,6 +85,7 @@ export function AdminPage() {
               : t === "products" ? "Products"
               : t === "templates" ? "Pocket Operator Themes"
               : t === "fm1themes" ? "FM1 Themes"
+              : t === "fm1knobs" ? "FM1 Knobs"
               : t === "decoder" ? "Order Decoder"
               : t === "shipping" ? "Shipping"
               : t === "configurators" ? "Configurators"
@@ -96,6 +98,7 @@ export function AdminPage() {
       {tab === "products" && <ProductsAdmin />}
       {tab === "templates" && <TemplatesAdmin />}
       {tab === "fm1themes" && <Fm1ThemesAdmin />}
+      {tab === "fm1knobs" && <Fm1KnobsAdmin />}
       {tab === "decoder" && <OrderDecoderAdmin />}
       {tab === "shipping" && <ShippingAdmin />}
       {tab === "configurators" && <ConfiguratorsAdmin />}

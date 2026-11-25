@@ -8,6 +8,8 @@ import { bezelId, NO_BEZEL, SLOTS, type Fm1Build, type Slot } from "./fm1Code.ts
 import { logoColor } from "./fm1Color.ts";
 import { loadLogo, logoCanvas } from "./fm1Logo.ts";
 import { firmwareById } from "../../data/firmwares.ts";
+import { hasCap } from "../../data/knobAvailability.ts";
+import { EXTRA_KNOBS } from "../../data/fm1Knobs.ts";
 
 export type FocusTarget = Slot | "faceplate" | null;
 /** What a 3D click or hover resolves to: one editable part. */
@@ -23,7 +25,7 @@ export interface Factory { body: string; keys: string }
 
 /** The case parts that slide away in "hide faceplate" (the knobs stay). */
 const isKitPart = (n: string) => n === "faceplate_body" || n === "faceplate_side" || n === "faceplate_accent_labels" || n.startsWith("bezel_");
-const KNOB_RE = /^knob_(\w+?)_(classic|groove)_(short|long)_(body|cap|inner)(?:_(slot|pointer|drop))?$/;   // inner = the black core seen through translucent knobs
+const KNOB_RE = /^knob_(\w+?)_([a-z]+)_(short|long)_(body|cap|inner)(?:_(slot|pointer|drop))?$/;   // inner = the black core seen through translucent knobs
 const HOME = { pos: new THREE.Vector3(0, 0.15, 0.19), target: new THREE.Vector3(0, 0, 0) };
 
 export class Fm1Scene {
@@ -57,6 +59,8 @@ export class Fm1Scene {
   private deviceShadow: THREE.Mesh | null = null;   // soft fake shadow under the device
   private contactShadows: THREE.Mesh[] = [];          // a soft dark spot on the plate under each knob
   private overlay!: SVGSVGElement;
+  // caps of the knob models added in the Studio: kept so the Studio's cap height slider can move them live
+  private extraCaps: { mesh: THREE.Mesh; model: string; vol: boolean; baseY: number; bodyTop: number; capH: number }[] = [];
   private brSel!: { halo: SVGPathElement; light: SVGPathElement };     // the part being edited
   private brHover!: { halo: SVGPathElement; light: SVGPathElement };   // the part under the mouse (2D or 3D)
   onPick: (p: Pick | null) => void = () => {};
@@ -153,6 +157,7 @@ export class Fm1Scene {
     });
     this.scene.add(gltf.scene);
     if (overrideUrl) await this.mergeOverrides(overrideUrl, gltf.scene);
+    await this.addExtraKnobs(gltf.scene);
     // thin outlines for the parts that turn into a ghost in knobs-only mode
     for (const m of this.meshes) {
       if (!["fm1_device_body", "fm1_keys", "keys_base", "fm1_screen"].includes(m.name)) continue;
@@ -274,6 +279,76 @@ export class Fm1Scene {
     }
   }
 
+  /** Knob models added in the Studio (src/data/fm1Knobs.ts): each GLB in public/models/knobs holds the function knob
+   *  and the volume knob (pivot at the base center). They are placed on the 8 slots like the built-in models, with the
+   *  slot's own materials (so colors work) and the shared caps of the device model, seated by capY / volCapY. */
+  private async addExtraKnobs(root: THREE.Object3D) {
+    if (!EXTRA_KNOBS.length) return;
+    const find = (n: string) => this.meshes.find((m) => m.name === n);
+    const loader = new GLTFLoader();
+    await Promise.all(EXTRA_KNOBS.map(async (k) => {
+      let g;
+      try { g = await loader.loadAsync(`${import.meta.env.BASE_URL}models/knobs/${k.glb}`); } catch { console.warn(`knob ${k.name}: ${k.glb} did not load`); return; }
+      g.scene.updateMatrixWorld(true);
+      const model = `${k.style}_${k.height}`;
+      const body = (vol: boolean) => {
+        const node = g.scene.getObjectByName(`knob_${vol ? "vol_" : ""}${model}_body`);
+        let mesh: THREE.Mesh | null = null;
+        node?.traverse((o) => { if (!mesh && (o as THREE.Mesh).isMesh) mesh = o as THREE.Mesh; });
+        if (!node || !mesh) return null;
+        const m = mesh as THREE.Mesh;
+        let geo = m.geometry.clone();
+        geo.applyMatrix4(m.matrixWorld);
+        const pivot = node.getWorldPosition(new THREE.Vector3());
+        geo.translate(-pivot.x, -pivot.y, -pivot.z);                 // pivot = base center
+        geo.computeBoundingBox();
+        const sz = geo.boundingBox!.getSize(new THREE.Vector3());
+        const d = Math.max(sz.x, sz.z);
+        const unit = d > 5 ? 0.001 : d > 0.2 ? 0.01 : 1;               // exported in mm or cm instead of meters
+        if (unit !== 1) geo.scale(unit, unit, unit);
+        if (geo.index) geo = geo.toNonIndexed();                       // flat shading, like the built-in knobs
+        geo.computeVertexNormals();
+        geo.computeBoundingBox();
+        return geo;
+      };
+      const fn = body(false), vb = body(true) ?? fn;
+      if (!fn) { console.warn(`knob ${k.name}: node knob_${model}_body not found in ${k.glb}`); return; }
+      for (const s of SLOTS) {
+        const vol = s === "vol";
+        const geo = vol ? vb! : fn;
+        const enc = find(`knob_${s}_encoder`);
+        const bodyMat = this.mats[`mat_knob_${s}_body`], capMat = this.mats[`mat_knob_${s}_cap`];
+        if (!enc || !bodyMat) continue;
+        const base = enc.getWorldPosition(new THREE.Vector3());
+        const bm = new THREE.Mesh(geo, bodyMat);
+        bm.name = `knob_${s}_${model}_body`;
+        bm.position.copy(base);
+        root.add(bm);
+        this.meshes.push(bm);
+        // the cap: the device model's own cap for this slot, moved onto this body
+        const src = find(`knob_${s}_groove_long_cap`) ?? find(`knob_${s}_classic_long_cap`);
+        if (!src || !capMat) continue;
+        const cg = src.geometry.clone();
+        cg.computeBoundingBox();
+        const cb = cg.boundingBox!;
+        cg.translate(-(cb.min.x + cb.max.x) / 2, -cb.min.y, -(cb.min.z + cb.max.z) / 2);
+        const capH = cb.max.y - cb.min.y, bodyTop = geo.boundingBox!.max.y;
+        const cm = new THREE.Mesh(cg, capMat);
+        cm.name = `knob_${s}_${model}_cap`;
+        const off = (vol ? k.volCapY : k.capY) / 1000;
+        cm.position.set(base.x, base.y + bodyTop + off - capH, base.z);
+        root.add(cm);
+        this.meshes.push(cm);
+        this.extraCaps.push({ mesh: cm, model, vol, baseY: base.y, bodyTop, capH });
+      }
+    }));
+  }
+
+  /** Studio: move the caps of a Studio-added knob model live (mm from the body top, negative = sunk). */
+  setExtraCapY(model: string, vol: boolean, mm: number) {
+    for (const c of this.extraCaps) if (c.model === model && c.vol === vol) c.mesh.position.y = c.baseY + c.bodyTop + mm / 1000 - c.capH;
+  }
+
   apply(b: Fm1Build, f: Factory) {
     this.applied = { b, f };
     const set = (n: string, hex: string) => {
@@ -363,6 +438,7 @@ export class Fm1Scene {
         // a variant the proxy model does not have yet (classic long before v0.7) shows its short sibling instead
         const has3d = !!kn && has(`knob_${k[1]}_${kn.style}_${kn.height}_body`);
         vis = !!kn && kn.style === k[2] && (has3d ? kn.height : "short") === k[3] && !k[5];
+        if (vis && k[4] === "cap" && !hasCap(kn.style, kn.height)) vis = false;   // a model that takes no cap
       }
       m.visible = vis;
     }

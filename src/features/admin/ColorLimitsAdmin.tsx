@@ -9,7 +9,8 @@ import { exportColorAvailabilityTs } from "./exportUtils.ts";
 // below is listed; a product with every Active color ticked simply offers them all (new colors you
 // add later show up there on their own).
 export const COLOR_LINES = [
-  { key: "fm1-kz", label: "FM1_Kz (cases + knobs)" },
+  { key: "fm1-case", label: "FM1_Kz case" },
+  { key: "fm1-knobs", label: "FM1_Kz knobs" },
   { key: "pokz", label: "Pocket Operator" },
 ] as const;
 
@@ -22,11 +23,11 @@ export function ColorLimitsAdmin({ colors }: { colors: FilamentColor[] }) {
   );
   const [saved, setSaved] = useState(false);
 
-  const isOn = (line: string, id: string) => (limits[line] ?? active.map((c) => c.id)).includes(id);
+  const isOn = (line: string, id: string) => (limits[line] ?? COLOR_LIMITS[line] ?? active.map((c) => c.id)).includes(id);
   const toggle = (line: string, id: string) => {
     setSaved(false);
     setLimits((prev) => {
-      const cur = prev[line] ?? active.map((c) => c.id);
+      const cur = prev[line] ?? COLOR_LIMITS[line] ?? active.map((c) => c.id);
       return { ...prev, [line]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] };
     });
   };

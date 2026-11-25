@@ -5,6 +5,7 @@ import { logoColor } from "./fm1Color.ts";
 import { fitLogo, useLogo } from "./fm1Logo.ts";
 import { JIANT_BEZEL } from "./jiantBezel.ts";
 import { firmwareById } from "../../data/firmwares.ts";
+import { hasCap } from "../../data/knobAvailability.ts";
 
 // Top view of the FM1 built from the vectorized reference (fm1TopShapes.ts). One component draws both
 // the filmstrip thumbnails (no handlers) and the big click-to-customize panel (handlers + group frames).
@@ -204,15 +205,16 @@ export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-
       {slots.map((s) => {
         const { cx, cy, r } = holes[s];
         const k = build.knobs[s];
-        const ink = lum(hex(k.cap)) > 0.55 ? "#0D0D0C" : "#EEECE6";
+        const capped = hasCap(k.style, k.height);   // some models take no cap: the body is the whole knob
+        const ink = lum(hex(capped ? k.cap : k.body)) > 0.55 ? "#0D0D0C" : "#EEECE6";
         return (
           <g key={s} className={hoverable} onPointerLeave={ix ? () => ix.onHover(null) : undefined}
             style={ix?.hover?.slot === s ? { filter: "brightness(1.25)" } : undefined}>
             {plate && !ix && <rect x={cx - r * 0.55} y={cy + r + 12} width={r * 1.1} height="9" fill={hex(build.accent)} />}
             <circle cx={cx} cy={cy} r={r * 0.9} fill={hex(k.body)} fillOpacity={tr?.(k.body) ? 0.6 : 1} stroke="#0D0D0C" strokeWidth="6" pointerEvents="none" />
             {tr?.(k.body) && <circle cx={cx} cy={cy} r={r * 0.9} fill={`url(#${stripes})`} pointerEvents="none" />}
-            <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.6 : 1} stroke="#0D0D0C" strokeWidth="3" pointerEvents="none" />
-            {tr?.(k.cap) && <circle cx={cx} cy={cy} r={r * 0.52} fill={`url(#${stripes})`} pointerEvents="none" />}
+            {capped && <circle cx={cx} cy={cy} r={r * 0.52} fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.6 : 1} stroke="#0D0D0C" strokeWidth="3" pointerEvents="none" />}
+            {capped && tr?.(k.cap) && <circle cx={cx} cy={cy} r={r * 0.52} fill={`url(#${stripes})`} pointerEvents="none" />}
             {ix && (
               <>
                 {/* two hit areas that never overlap: the body is a ring (donut), the cap is the disc inside it */}
@@ -220,7 +222,7 @@ export function Fm1TopView({ build, hex, tr, factory, ix, className = "w-full h-
                   d={`${circle(cx, cy, r * 0.9)}${circle(cx, cy, r * 0.52)}`}
                   onClick={() => ix.onKnob(s, "body")} onPointerEnter={() => ix.onHover({ slot: s, part: "body" })} />
                 <circle cx={cx} cy={cy} r={r * 0.52} fill="transparent"
-                  onClick={() => ix.onKnob(s, "cap")} onPointerEnter={() => ix.onHover({ slot: s, part: "cap" })} />
+                  onClick={() => ix.onKnob(s, capped ? "cap" : "body")} onPointerEnter={() => ix.onHover({ slot: s, part: capped ? "cap" : "body" })} />
               </>
             )}
             {ix?.hover?.slot === s && ix.selKnob !== s && <Brackets x={cx - r * 0.9} y={cy - r * 0.9} w={r * 1.8} h={r * 1.8} pad={24} len={30} soft />}

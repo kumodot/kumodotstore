@@ -1,8 +1,9 @@
 import { KNOB_STAT_LABELS, KNOB_STATS } from "@/data/knobStats.ts";
+import { EXTRA_KNOBS } from "@/data/fm1Knobs.ts";
 
 /** Compact stat bars: five thin blocks per attribute, orange up to the score. A minor spec, so small and quiet. */
 export function KnobStats({ variant }: { variant: string }) {
-  const stats = KNOB_STATS[variant];
+  const stats = KNOB_STATS[variant] ?? EXTRA_KNOBS.find((k) => `${k.style}_${k.height}` === variant)?.stats;
   if (!stats) return null;
   return (
     <div className="mt-2 grid grid-cols-[auto_auto] justify-start gap-x-6 gap-y-[3px] sm:grid-cols-[auto_auto_auto_auto] sm:gap-x-3" aria-label="Knob stats">

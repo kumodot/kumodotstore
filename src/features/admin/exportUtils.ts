@@ -24,20 +24,24 @@ export const STORE_MODE: StoreMode = {
   downloadFile("storeMode.ts", content);
 }
 
-export async function exportFm1ThemesTs(themes: { id: string; name: string; code: string }[]): Promise<void> {
+export async function exportFm1ThemesTs(themes: { id: string; name: string; code: string; enabled?: boolean; lock?: string }[]): Promise<void> {
   const used = new Set<string>();
   const rows = themes.map((t, i) => {
     const slug = (t.id || t.name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `theme-${i + 1}`;
     let id = slug;
     for (let n = 2; used.has(id); n++) id = `${slug}-${n}`;
     used.add(id);
-    return `  { id: ${JSON.stringify(id)}, name: ${JSON.stringify(t.name.trim())}, code: ${JSON.stringify(t.code.trim())} },`;
+    const extra = `${t.enabled === false ? ", enabled: false" : ""}${t.lock ? `, lock: ${JSON.stringify(t.lock)}` : ""}`;
+    return `  { id: ${JSON.stringify(id)}, name: ${JSON.stringify(t.name.trim())}, code: ${JSON.stringify(t.code.trim())}${extra} },`;
   });
   const content = `// FM1_Kz ready themes (the strip at the top of the Kustomizer).
 //
-// A theme is just a name and an order code. To add one: design it in the Kustomizer, press Copy, then paste the
+// A theme is a name and an order code. To add one: design it in the Kustomizer, press Copy, then paste the
 // code in the Store Studio, tab "FM1 Themes". The Studio writes this file. Ids are codenames, not public names.
-export interface Fm1ThemeData { id: string; name: string; code: string }
+// enabled: false = hidden on the public site (ready but not released yet).
+// lock: SHA-256 of a secret unlock code (see src/features/fm1/themeLock.ts); the theme only shows for buyers who
+// typed that code in the Kustomizer. The code itself is never stored here.
+export interface Fm1ThemeData { id: string; name: string; code: string; enabled?: boolean; lock?: string }
 
 export const FM1_THEMES: Fm1ThemeData[] = [
 ${rows.join("\n")}
@@ -59,8 +63,8 @@ export async function exportColorAvailabilityTs(limits: Record<string, string[]>
 // the tools only ever show these colors, and a code or saved theme that already uses another color
 // still loads and still draws correctly.
 //
-// Written by the admin (Colors tab, "Colors per product"). Keys: "fm1-kz" (FM1_Kz cases and knobs) and
-// "pokz" (Pocket Operator cases). Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue,
+// Written by the admin (Colors tab, "Colors per product"). Keys: "fm1-case" (FM1_Kz faceplate and bezel),
+// "fm1-knobs" (FM1_Kz knob bodies and caps) and "pokz" (Pocket Operator cases). Ids: RD Red, OR Orange, YE Yellow, GR Green, IB Ice Blue, BL Blue,
 // PU Purple, LG Light Gray, MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
 export const COLOR_LIMITS: Record<string, string[] | undefined> = {
 ${entries.join("\n")}
@@ -263,6 +267,25 @@ export function getCheckoutCountriesGrouped(): { direct: CheckoutCountry[]; vat:
 }
 `;
   downloadFile("shipping.ts", content);
+}
+
+export async function exportKnobAvailabilityTs(off: string[], noCap: string[]): Promise<void> {
+  const list = (a: string[]) => a.map((x) => JSON.stringify(x)).join(", ");
+  const content = `// FM1_Kz knob models: which are out of stock right now, and which take no cap.
+//
+// Written by the Store Studio (FM1 Themes tab, "Knob models"). Ids: classic_short, classic_long (Chalice),
+// groove_short, groove_long.
+// KNOBS_OFF: hidden from the model arrows on the public site; a theme or a pasted code that already uses it still
+// loads, and the buyer sees a short out-of-stock note before ordering.
+// KNOBS_NO_CAP: models that take no cap. The cap is hidden everywhere (3D, top view, picture, packing list); the
+// order code keeps its cap color field, so switching the model back brings the cap back.
+export const KNOBS_OFF: string[] = [${list(off)}];
+export const KNOBS_NO_CAP: string[] = [${list(noCap)}];
+
+export const knobOn = (style: string, height: string) => !KNOBS_OFF.includes(\`\${style}_\${height}\`);
+export const hasCap = (style: string, height: string) => !KNOBS_NO_CAP.includes(\`\${style}_\${height}\`);
+`;
+  await downloadFile("knobAvailability.ts", content);
 }
 
 async function downloadFile(filename: string, content: string): Promise<void> {

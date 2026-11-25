@@ -128,3 +128,6 @@ a[class*="bg-accent"]:hover { color: #0D0D0C; }
   16%, 50%, 83% { background: #FF5A1F; color: #0D0D0C; border-color: #FF5A1F; }
 }
 @keyframes demoPulse { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.7); opacity: 0; } }
+
+/* speech bubble of the walking critter (CritterWalker): a small tail pointing down at it */
+.critter-bubble::after { content: ""; position: absolute; top: 100%; left: var(--tail, 50%); translate: -50% 0; border: 6px solid transparent; border-top-color: #F4F1EA; }

@@ -3,7 +3,8 @@
 //   Case:  FM1v2|F=<body>,<accent>,<side>,<bezel>,<badge>,<logo>|L=<k>,<k>,<k>,<k>|R=<k>,<k>,<k>,<k>|<check>
 //   Knobs: FM1k1|L=<k>,<k>,<k>,<k>|R=<k>,<k>,<k>,<k>|<check>          (no F= block)
 //
-// <k> = one knob, 6 chars: <style C|G><height S|L><body color id><cap color id>
+// <k> = one knob, 6 chars: <style letter><height S|L><body color id><cap color id>
+//   style letters: C classic, G groove, plus one letter per extra model in src/data/fm1Knobs.ts (never reused)
 //   L = vol,nav1,nav2,nav3   R = p1,p2,p3,p4   (UI labels V S P A / K1-K4)
 // side is "-" when the sides follow the faceplate color, else a color id (the faceplate wraps the
 // sides, some themes color them). bezel is "=" when it follows the accent. badge is "-" for the basic bezel,
@@ -17,10 +18,18 @@
 // Changed from the alpha's v1 (one style/height/cap per group) because the
 // handoff UX needs per-knob style, height and cap color. v1 never went public.
 import { FIRMWARE_LIST, type FirmwareId } from "../../data/firmwares.ts";
+import { EXTRA_KNOBS } from "../../data/fm1Knobs.ts";
 
 import { COLORS_BY_ID } from "../../data/colors.ts";
 
-export type Style = "classic" | "groove";
+/** "classic" | "groove" | the style of an extra model (src/data/fm1Knobs.ts) */
+export type Style = string;
+/** Style -> letter in the order code. */
+export const STYLE_LETTER: Record<string, string> = {
+  classic: "C", groove: "G",
+  ...Object.fromEntries(EXTRA_KNOBS.map((k) => [k.style, k.letter])),
+};
+const LETTER_STYLE: Record<string, string> = Object.fromEntries(Object.entries(STYLE_LETTER).map(([s, l]) => [l, s]));
 export type Height = "short" | "long";
 export const SLOTS = ["vol", "nav1", "nav2", "nav3", "p1", "p2", "p3", "p4"] as const;
 export type Slot = (typeof SLOTS)[number];
@@ -65,7 +74,7 @@ const checksum = (str: string) => {
 };
 
 const knobTok = (k: Knob) =>
-  `${k.style === "classic" ? "C" : "G"}${k.height === "short" ? "S" : "L"}${k.body}${k.cap}`;
+  `${STYLE_LETTER[k.style] ?? "C"}${k.height === "short" ? "S" : "L"}${k.body}${k.cap}`;
 
 export function encodeFm1(b: Fm1Build): string {
   const grp = (g: "L" | "R") => GROUPS[g].map((s) => knobTok(b.knobs[s])).join(",");
@@ -106,9 +115,10 @@ export function decodeFm1(raw: string): Fm1Build {
     GROUPS[g].forEach((slot, i) => {
       const t = toks[i];
       if (t.length !== 6) throw new Error("Bad knob entry: " + t);
-      const style = t[0] === "C" ? "classic" : t[0] === "G" ? "groove" : null;
+      const style = LETTER_STYLE[t[0]] ?? null;
       const height = t[1] === "S" ? "short" : t[1] === "L" ? "long" : null;
-      if (!style || !height) throw new Error("Bad knob style or height.");
+      if (!style) throw new Error(`Unknown knob model (letter ${t[0]}).`);
+      if (!height) throw new Error("Bad knob height.");
       if (!variantOk(style, height)) throw new Error("Classic long knobs do not exist.");
       knobs[slot] = { style, height, body: col(t.slice(2, 4)), cap: col(t.slice(4, 6)) };
     });

@@ -2,11 +2,12 @@
 //
 // It lets the local admin (the Studio page) do three things without any file dialog:
 //   write   save a data file straight into src/data
+//   asset   save an uploaded knob model or knob picture (public/models/knobs/*.glb, public/renders/*.webp|png|manifest.json)
 //   status  what changed and is not published yet
 //   publish check the build, commit src/data and push to main (the live site updates in about 90 seconds)
 //
 // Safety: only answers requests from this computer (loopback address and a localhost Host header), only writes
-// existing *.ts files inside src/data, and every action needs a random per-run token that is handed out only to
+// existing *.ts files inside src/data (plus new files in the two asset folders above, by strict name), and every action needs a random per-run token that is handed out only to
 // a same-origin request, so another website open in your browser cannot trigger anything.
 import type { Plugin } from "vite";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -60,6 +61,8 @@ export function studioPlugin(): Plugin {
     configResolved(c) { root = c.root; },
     configureServer(server) {
       const dataDir = path.join(root, "src", "data");
+      // what the Studio publishes: the data files and the knob models / pictures added from the Studio
+      const PUBLISHED = ["src/data", "public/models/knobs", "public/renders"];
       const git = (args: string[]) => run("git", args, root);
 
       server.middlewares.use("/__studio", async (req, res) => {
@@ -80,9 +83,9 @@ export function studioPlugin(): Plugin {
 
           if (req.method === "GET" && url === "/status") {
             const branch = (await git(["rev-parse", "--abbrev-ref", "HEAD"])).out;
-            const dataChanges = (await git(["status", "--porcelain", "--", "src/data"])).out.split("\n").filter(Boolean);
-            const all = (await git(["status", "--porcelain"])).out.split("\n").filter(Boolean);
-            const last = (await git(["log", "-1", "--format=%h %s"])).out;
+            const dataChanges = (await git(["status", "--porcelain", "--untracked-files=all", "--", ...PUBLISHED])).out.split("\n").filter(Boolean);
+            const all = (await git(["status", "--porcelain", "--untracked-files=all"])).out.split("\n").filter(Boolean);
+            const last = (await git(["log", "-1", "--format=%h%x20%s"])).out;
             return send(res, 200, {
               branch,
               changed: dataChanges.map((l) => l.slice(3)),
@@ -102,6 +105,19 @@ export function studioPlugin(): Plugin {
             return send(res, 200, { ok: true, file, bytes: Buffer.byteLength(content) });
           }
 
+          if (req.method === "POST" && url === "/asset") {
+            const { file, base64 } = JSON.parse(await readBody(req, 60_000_000)) as { file?: string; base64?: string };
+            if (typeof file !== "string" || typeof base64 !== "string"
+              || !/^(models\/knobs\/[A-Za-z0-9_.-]+\.glb|renders\/[A-Za-z0-9_.-]+\.(webp|png)|renders\/manifest\.json)$/.test(file) || file.includes("..")) {
+              return send(res, 400, { error: "bad request" });
+            }
+            const target = path.join(root, "public", ...file.split("/"));
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            const buf = Buffer.from(base64, "base64");
+            fs.writeFileSync(target, buf);
+            return send(res, 200, { ok: true, file, bytes: buf.length });
+          }
+
           if (req.method === "POST" && url === "/discard") {
             const r = await git(["checkout", "--", "src/data"]);
             return send(res, r.code === 0 ? 200 : 500, { ok: r.code === 0, out: r.out });
@@ -119,7 +135,7 @@ export function studioPlugin(): Plugin {
             if (build.code !== 0) return fail("build check", build.out || "The site does not build with these changes.");
             steps.push({ name: "build check", ok: true, out: "" });
 
-            await git(["add", "src/data"]);
+            await git(["add", "--", ...PUBLISHED]);
             const staged = await git(["diff", "--cached", "--quiet"]);
             if (staged.code === 0) return send(res, 200, { ok: true, nothing: true, steps });
 

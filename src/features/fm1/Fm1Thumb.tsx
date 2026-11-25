@@ -1,5 +1,6 @@
 import { Fm1TopView } from "./Fm1TopView.tsx";
 import { GROUPS, type Fm1Build, type Slot } from "./fm1Code.ts";
+import { hasCap } from "../../data/knobAvailability.ts";
 
 // Knobs-only thumbnails show just the 8 knobs in their two groups (V S / P A and K1 K2 / K3 K4),
 // with no case, because that product is only the knobs. The 3D view still shows the whole device.
@@ -26,7 +27,7 @@ export function Fm1Thumb({ build, hex, tr, factory, bare = false }: {
           return (
             <g key={s}>
               <circle cx={cx} cy={cy} r="80" fill={hex(k.body)} fillOpacity={tr?.(k.body) ? 0.55 : 1} stroke="#3B3A36" strokeWidth="6" />
-              <circle cx={cx} cy={cy} r="44" fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.55 : 1} stroke="#0D0D0C" strokeWidth="4" />
+              {hasCap(k.style, k.height) && <circle cx={cx} cy={cy} r="44" fill={hex(k.cap)} fillOpacity={tr?.(k.cap) ? 0.55 : 1} stroke="#0D0D0C" strokeWidth="4" />}
             </g>
           );
         })}

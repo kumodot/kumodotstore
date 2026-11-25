@@ -1,5 +1,6 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Scramble } from "./Scramble.tsx";
+import { RevealName } from "./RevealName.tsx";
 
 // One theme picker for every Kustomizer: a horizontal filmstrip of thumbnails.
 // The thumbnail is passed in as a node, so each product draws its own (POKZ grid,
@@ -10,9 +11,10 @@ export interface FilmItem {
   thumb: ReactNode;
   removable?: boolean;   // a theme the buyer saved on this device: shows a small x to delete it
   draft?: boolean;       // the buyer's own unsaved customization: its name is shown in orange
+  reveal?: string;       // a theme that just appeared (e.g. unlocked): shows this in orange first, then scrambles to the name
 }
 
-export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, label = "PICK A THEME", aspect = "aspect-[4/3]" }: {
+export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, label = "PICK A THEME", aspect = "aspect-[4/3]", extra }: {
   items: FilmItem[];
   activeId: string | null;
   onSelect: (id: string) => void;
@@ -20,6 +22,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
   onRemove?: (id: string) => void;
   label?: string;
   aspect?: string;   // tailwind aspect class of the thumbnail frame, portrait cases use aspect-[3/4]
+  extra?: ReactNode;   // shown on the right of the title (e.g. the unlock code box)
 }) {
   const rail = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLElement>(null);
@@ -37,13 +40,22 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
     const r = rail.current;
     if (r) { r.style.scrollSnapType = ""; r.style.scrollBehavior = ""; }
   };
+  // a theme that just appeared with a reveal (unlocked): slide the strip to it so the show is seen
+  const revealId = items.find((it) => it.reveal)?.id;
+  useEffect(() => {
+    if (!revealId || !rail.current) return;
+    const card = rail.current.querySelector<HTMLElement>(`[data-film-id="${CSS.escape(revealId)}"]`);
+    const r = rail.current;
+    if (card) r.scrollTo({ left: card.offsetLeft - (r.clientWidth - card.offsetWidth) / 2, behavior: "smooth" });
+  }, [revealId]);
   const nudge = (dir: number) =>
     rail.current?.scrollBy({ left: dir * rail.current.clientWidth * 0.8, behavior: "smooth" });
 
   return (
     <section ref={root} aria-label={label} style={{ scrollMarginTop: 76 }}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
         <h3 className="mono">{label}</h3>
+        {extra}
       </div>
       <div className="relative">
       {/* the arrows sit over the strip, in its corners: bigger to hit, and no row of their own */}
@@ -86,7 +98,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
           // pushes the neighbours. The thumbnail keeps a fixed size (centered), so height never changes.
           const open = activeId === it.id;
           return (
-            <div key={it.id} className="relative snap-start shrink-0">
+            <div key={it.id} data-film-id={it.id} className="relative snap-start shrink-0">
               <button
                 onClick={() => pick(it.id)}
                 aria-pressed={open}
@@ -101,7 +113,7 @@ export function ThemeFilmstrip({ items, activeId, onSelect, onSave, onRemove, la
                 </span>
                 <span className={`block mono mt-1.5 h-5 leading-5 ${it.draft ? "!text-accent" : "text-text-primary"} whitespace-nowrap
                                   ${open ? "" : "max-w-[116px] truncate group-hover:max-w-none group-hover:overflow-visible"}`}>
-                  <Scramble text={it.name} />
+                  {it.reveal ? <RevealName from={it.reveal} to={it.name} /> : <Scramble text={it.name} />}
                 </span>
               </button>
               {it.removable && onRemove && (
