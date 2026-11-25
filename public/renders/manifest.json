@@ -6,33 +6,44 @@
   },
   "knobs": {
     "classic_long": {
-      "body": "knob_classic_long_body.webp",
-      "cap": "knob_classic_long_cap.webp"
+      "body": "knob_classic_long_body.webp?v=1186a715",
+      "cap": "knob_classic_long_cap.webp?v=1186a715"
     },
     "classic_short": {
-      "body": "knob_classic_short_body.webp"
+      "body": "knob_classic_short_body.webp?v=1186a715",
+      "cap": "knob_classic_short_cap.webp?v=1186a715"
     },
     "groove_long": {
-      "body": "knob_groove_long_body.webp"
+      "body": "knob_groove_long_body.webp?v=1186a715",
+      "cap": "knob_groove_long_cap.webp?v=1186a715"
     },
     "groove_short": {
-      "body": "knob_groove_short_body.webp",
-      "cap": "knob_groove_short_cap.webp"
+      "body": "knob_groove_short_body.webp?v=1186a715",
+      "cap": "knob_groove_short_cap.webp?v=1186a715"
     },
     "vol_classic_long": {
-      "body": "knob_vol_classic_long_body.webp",
-      "cap": "knob_vol_classic_long_cap.webp"
+      "body": "knob_vol_classic_long_body.webp?v=1186a715",
+      "cap": "knob_vol_classic_long_cap.webp?v=1186a715"
     },
     "vol_classic_short": {
-      "body": "knob_vol_classic_short_body.webp",
-      "cap": "knob_vol_classic_short_cap.webp"
+      "body": "knob_vol_classic_short_body.webp?v=1186a715",
+      "cap": "knob_vol_classic_short_cap.webp?v=1186a715"
     },
     "vol_groove_long": {
-      "body": "knob_vol_groove_long_body.webp"
+      "body": "knob_vol_groove_long_body.webp?v=1186a715",
+      "cap": "knob_vol_groove_long_cap.webp?v=1186a715"
     },
     "vol_groove_short": {
-      "body": "knob_vol_groove_short_body.webp",
-      "cap": "knob_vol_groove_short_cap.webp"
+      "body": "knob_vol_groove_short_body.webp?v=1186a715",
+      "cap": "knob_vol_groove_short_cap.webp?v=1186a715"
+    },
+    "tower_long": {
+      "body": "knob_tower_long_body.webp?v=mwvswkln",
+      "cap": "knob_tower_long_cap.webp?v=mwvswkln"
+    },
+    "vol_tower_long": {
+      "body": "knob_vol_tower_long_body.webp?v=mwvswkln",
+      "cap": "knob_vol_tower_long_cap.webp?v=mwvswkln"
     }
   },
   "base": "knob_base.webp"

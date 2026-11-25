@@ -16,6 +16,7 @@ export const FILAMENT_COLORS: FilamentColor[] = [
   { id: "GD", name: "GOLD", rgb: [210, 148, 15], hex: "#d2940f", available: true },
   { id: "TW", name: "Translucent White", rgb: [219, 219, 219], hex: "#dbdbdb", available: true, translucent: true, knobsOnly: true },
   { id: "TO", name: "Translucent Orange", rgb: [255, 149, 0], hex: "#ff9500", available: true, translucent: true, knobsOnly: true },
+  { id: "DP", name: "Dark Purple", rgb: [83, 63, 238], hex: "#533fee", available: true },
 ];
 
 export const COLORS_BY_ID: Record<string, FilamentColor> = Object.fromEntries(
