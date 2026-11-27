@@ -3,6 +3,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { bezelId, NO_BEZEL, SLOTS, type Fm1Build, type Slot } from "./fm1Code.ts";
 import { logoColor } from "./fm1Color.ts";
@@ -306,8 +307,7 @@ export class Fm1Scene {
         const d = Math.max(sz.x, sz.z);
         const unit = d > 5 ? 0.001 : d > 0.2 ? 0.01 : 1;               // exported in mm or cm instead of meters
         if (unit !== 1) geo.scale(unit, unit, unit);
-        if (geo.index) geo = geo.toNonIndexed();                       // flat shading, like the built-in knobs
-        geo.computeVertexNormals();
+        geo = toCreasedNormals(geo, (40 * Math.PI) / 180);             // auto smooth by angle, like the built-in knobs
         geo.computeBoundingBox();
         return geo;
       };
@@ -331,7 +331,7 @@ export class Fm1Scene {
         const cg = src.geometry.clone();
         cg.computeBoundingBox();
         const cb = cg.boundingBox!;
-        cg.translate(-(cb.min.x + cb.max.x) / 2, -cb.min.y, -(cb.min.z + cb.max.z) / 2);
+        cg.translate(0, -cb.min.y, 0);   // x/z stay as the device model has them (already centered on the slot)
         const capH = cb.max.y - cb.min.y, bodyTop = geo.boundingBox!.max.y;
         const cm = new THREE.Mesh(cg, capMat);
         cm.name = `knob_${s}_${model}_cap`;

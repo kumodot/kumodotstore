@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useRef, useState } from "react";
 import type { CaseModel } from "@/types/index.ts";
-import { getRgbStyle } from "../utils/colorSystem.ts";
+import { getSwatchStyle } from "../utils/colorSystem.ts";
 import { ColorPicker } from "./ColorPicker.tsx";
 import { playGlitch } from "@/utils/glitchSound.ts";
 
@@ -55,7 +55,7 @@ export const ButtonGrid = forwardRef<HTMLDivElement, ButtonGridProps>(
             <button
               ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => onButtonClick(index)}
-              style={{ backgroundColor: getRgbStyle(flick[index] ?? colorId) }}
+              style={getSwatchStyle(flick[index] ?? colorId)}
               className="w-16 h-16 lg:w-24 lg:h-24 shadow-md hover:shadow-lg border border-border
                          transition-all duration-150 hover:scale-105 cursor-pointer"
             />

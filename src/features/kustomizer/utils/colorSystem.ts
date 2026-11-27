@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import { colorsStore } from "@/data/colorsStore.ts";
+import { swatchStyle } from "@/utils/swatch.ts";
 import type { CaseModel } from "@/types/index.ts";
 
 export function getRgbStyle(colorId: string): string {
@@ -9,6 +11,14 @@ export function getRgbStyle(colorId: string): string {
   }
   return "rgb(128, 128, 128)";
 }
+
+/** A pad or swatch drawn like in the FM1 Kustomizer: solid, or striped and faded when the filament is translucent. */
+export function getSwatchStyle(colorId: string): CSSProperties {
+  const c = colorsStore.getColorById(colorId);
+  return c ? swatchStyle(c) : { background: "rgb(128, 128, 128)" };
+}
+
+export const isTranslucent = (colorId: string) => !!colorsStore.getColorById(colorId)?.translucent;
 
 export function formatOrderCode(
   colors: string[],

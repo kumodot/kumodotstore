@@ -37,34 +37,45 @@ type Target =
   | { k: "group"; g: "L" | "R"; part: "body" | "cap" }
   | { k: "knob"; slot: Slot; part: "body" | "cap" };
 
-const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_site_v0.91.glb`;
+const GLB = `${import.meta.env.BASE_URL}models/FM1_Kz_site_v0.92.glb`;
 // optional: a file with a few new or replaced parts, only used if it exists (see Fm1Scene.mergeOverrides)
 const GLB_OVERRIDES = `${import.meta.env.BASE_URL}models/FM1_Kz_overrides.glb`;
 const cloneBuild = (b: Fm1Build): Fm1Build => JSON.parse(JSON.stringify(b));
 
 type FpPartName = "body" | "accent" | "side" | "bezel" | "logo";
+/** The features in use right now. Unlocking themes works like a collection: each secret theme the buyer unlocked opens
+ *  what that theme has, and nothing else.
+ *    sides color: open if an unlocked theme has its own sides color
+ *    logo color:  open if an unlocked theme has its own firmware logo color
+ *    bezels:      the basic bezel plus the badge bezel of each unlocked theme (SLOOP + JIANT unlocked: Basic, SLOOP, JIANT)
+ *  Set at the top of every render and before loading a build, so the helpers below always see the current value. */
+type Feat = { sides: boolean; badge: boolean; logo: boolean };
+const BASE_FEAT: Feat = { ...FM1_FEATURES, logo: FM1_FEATURES.badge };
+let FEAT: Feat = BASE_FEAT;
+const featFor = (perks: boolean, got: Partial<Feat> = {}): Feat =>
+  FM1_PUBLIC_VIEW && perks ? { sides: !!got.sides, badge: !!got.badge, logo: !!got.logo } : BASE_FEAT;
 /** A part that is turned off in FM1_FEATURES hands its clicks to the part that now drives it. */
 /** The four knob models, in the order the arrows go through them. */
 const MODELS: { st: string; h: "short" | "long" }[] = [
   { st: "classic", h: "short" }, { st: "classic", h: "long" }, { st: "groove", h: "short" }, { st: "groove", h: "long" },
   ...EXTRA_KNOBS.map((k) => ({ st: k.style, h: k.height })),   // models added in the Studio
 ];
-const effPartBase = (p: FpPartName): FpPartName => (!FM1_FEATURES.sides && p === "side" ? "body" : !FM1_FEATURES.badge && p === "logo" ? "accent" : p);
+const effPartBase = (p: FpPartName): FpPartName => (!FEAT.sides && p === "side" ? "body" : !FEAT.logo && p === "logo" ? "accent" : p);
 /** The materials a faceplate part controls (for the highlight and the hover glow). */
 const fpMats = (p: FpPartName, sideFollows: boolean) =>
   p === "body" ? ["mat_faceplate_body", ...(sideFollows ? ["mat_faceplate_side"] : [])]
-    : p === "accent" ? (FM1_FEATURES.badge ? ["mat_faceplate_accent", "mat_faceplate_accent_labels"] : ["mat_faceplate_accent", "mat_faceplate_accent_labels", "mat_bezel_simple", "mat_bezel_ext"])
+    : p === "accent" ? (FEAT.badge ? ["mat_faceplate_accent", "mat_faceplate_accent_labels"] : ["mat_faceplate_accent", "mat_faceplate_accent_labels", "mat_bezel_simple", "mat_bezel_ext"])
     : p === "side" ? ["mat_faceplate_side"] : p === "logo" ? ["mat_bezel_logo"] : ["mat_bezel_simple", "mat_bezel_ext"];
 /** Features that are off are fixed in the build, so nothing hidden can reach the code. */
 const norm = (b: Fm1Build): Fm1Build => {
-  if (!FM1_FEATURES.sides) b.side = null;
-  if (!FM1_FEATURES.badge) { b.badge = null; b.logo = null; }   // the bezel color (or its deletion) stays as it is
+  if (!FEAT.sides) b.side = null;
+  if (!FEAT.badge && !FEAT.logo) { b.badge = null; b.logo = null; }   // the bezel color (or its deletion) stays as it is
   return b;
 };
 
 /** A fixed theme has a sides color of its own, and the public editor does not offer sides yet: its faceplate cannot be edited,
  *  unless the faceplate becomes one plain color (sides follow it). The badge, logo and bezel stay as the theme has them and are printed with it. */
-const isLocked = (b: Fm1Build) => !FM1_FEATURES.sides && b.side !== null && b.side !== b.body;
+const isLocked = (b: Fm1Build) => !FEAT.sides && b.side !== null && b.side !== b.body;
 
 const UNLOCK_TIP = "Follow @kumodotdesign on Instagram for a chance to unlock exclusive themes!";
 const UNLOCK_TIP_NODE = (
@@ -86,8 +97,22 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const isT = (id: string) => !!allColors.find((c) => c.id === id)?.translucent;      // translucent filament: striped swatch, see-through in 3D
 
   const [unlocked, setUnlocked] = useState<string[]>(loadUnlocked);
+  // perks: the buyer is on a theme they unlocked (or on their own build after unlocking one): all edits are open
   const themes = FIXED_THEMES.filter((t) => themeVisible(t, unlocked));
   const first = themes[0] ?? FIXED_THEMES[0];
+  const [perks, setPerks] = useState(() => !!first.lock);
+  // what this buyer has collected from the secret themes they unlocked (the Studio offers everything)
+  const collected = (extra?: (typeof FIXED_THEMES)[number]) => {
+    const got = FIXED_THEMES.filter((t) => t.enabled && t.lock && (isUnlocked(unlocked, t.id, t.lock) || t === extra));
+    return {
+      badges: [...new Set(got.filter((t) => t.build.badge).map((t) => t.build.badge!))],
+      sides: got.some((t) => t.build.side !== null && t.build.side !== t.build.body),
+      logo: got.some((t) => t.build.logo !== null),
+    };
+  };
+  const col = collected();
+  const unlockedBadges = FM1_PUBLIC_VIEW ? col.badges : [...FIRMWARES];
+  FEAT = featFor(perks, { sides: col.sides, badge: col.badges.length > 0, logo: col.logo });
   const start = (): Fm1Build => ({ ...cloneBuild(first.build), mode });   // a fixed theme shows everything it has
   const [build, setBuild] = useState<Fm1Build>(start);
   const [factory, setFactory] = useState<FactoryId>("beige1");
@@ -147,10 +172,17 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
   const [origin, setOrigin] = useState<string | null>(null);   // the saved theme the buyer is editing, if any
   // color menu docked on the 3D view, opened by tapping a part (3D or 2D view)
   const [radial, setRadial] = useState(false);
-  const openRadial = () => setRadial(true);
+  // every way into a customization (3D, 2D top view, part buttons) opens the color menu here: it also brings the editor to the top
+  const openRadial = () => { setRadial(true); toEditor(); };
   const [thanks, setThanks] = useState(false);
   const [copyOk, setCopyOk] = useState(true);
   const host = useRef<HTMLDivElement>(null);
+  const editor = useRef<HTMLDivElement>(null);   // the 3D + controls block: a click on the 3D brings it to the top, like picking a theme
+  const toEditor = () => {
+    const el = editor.current; if (!el) return;
+    const top = el.getBoundingClientRect().top;
+    if (Math.abs(top - 76) > 12) window.setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  };
   const scene = useRef<Fm1Scene | null>(null);
   type Hover = { names: string[]; slot?: Slot; fp?: "body" | "accent" | "side" | "bezel" | "logo"; part?: "body" | "cap"; group?: { g: "L" | "R"; part: "body" | "cap" } };
   const [hover, setHover] = useState<Hover | null>(null);
@@ -203,7 +235,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     return slots.map((s) => `mat_knob_${s}_${target.part}`);
   }, [target, build.side]);
   // name of the part being customized, shown in a corner of the 3D view
-  const fpName: Record<FpPartName, string> = { body: "FACEPLATE", accent: FM1_FEATURES.badge ? "ACCENT COLOR" : "ACCENT + BEZEL", side: "SIDES", bezel: "BEZEL", logo: "FIRMWARE LOGO" };
+  const fpName: Record<FpPartName, string> = { body: "FACEPLATE", accent: FEAT.badge ? "ACCENT COLOR" : "ACCENT + BEZEL", side: "SIDES", bezel: "BEZEL", logo: "FIRMWARE LOGO" };
   const targetLabel = useMemo(() => {
     if (target.k === "fp") return fpName[effPart(target.part)];
     const which = target.part === "body" ? "BODY" : "CAP";
@@ -263,9 +295,10 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       const b = cloneBuild(cur); b.side = null;
       setHist((h) => [...h.slice(-49), { b: cloneBuild(cur), id: themeIdRef.current }]);
       setBuild(b); setThemeId("");
-      note = "Sides color is not editable yet (soon). The sides now follow the faceplate color.";
-    } else if (raw === "side" && part !== raw) note = "Sides color is not editable yet (soon).";
-    else if (raw === "logo" && part !== raw) note = "Editing firmware badges is coming soon!";
+      note = "The sides now follow the faceplate color.";
+    }
+    // a part that is still locked (sides color, logo color) quietly hands the click to the part that drives it: no hint
+    // that it can be unlocked, finding that out is part of the unlock game
     if (note) setSoonAsk({ text: note });
     setSelKnob(null); setTarget({ k: "fp", part }); scene.current?.focus("faceplate"); }
   function pickFaceplate() { pickFp("body"); }
@@ -282,8 +315,8 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     if (!l) return;
     setBuild(l.b); setThemeId(l.id); setHist(hist.slice(0, -1)); setSoonAsk(null);
   };
-  // Everything the editor offers is editable. The parts it does not offer yet (sides color, firmware badge) stay as the theme
-  // has them: only trying to edit them gets the SOON notice (see pickFp).
+  // Everything the editor offers is editable. The parts it does not offer (sides color, firmware badge, logo color until a
+  // secret theme unlocks them) stay as the theme has them, without saying they could be unlocked (see pickFp).
   const edit = (fn: (b: Fm1Build) => void) => {
     const b = cloneBuild(build); fn(b);
     snap(); setBuild(b); setThemeId(""); setSoonAsk(null); };
@@ -295,7 +328,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
       else if (target.part === "side") b.side = id;
       else {
         b[target.part] = id;
-        if (target.part === "body" && !FM1_FEATURES.sides) b.side = null;
+        if (target.part === "body" && !FEAT.sides) b.side = null;
         // linked ("Accent + Bezel"): the bezel follows the new accent, even when the theme had a bezel color of its own
         if (target.part === "accent" && !split && b.bezel !== NO_BEZEL) b.bezel = null;
       }
@@ -327,7 +360,14 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
     setVariant(selKnob, { style: n.st, height: n.h });
   };
 
-  const loadBuild = (b: Fm1Build, id: string) => { snap(); setSoonAsk(null); setForceSplit(false); setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
+  const loadBuild = (b: Fm1Build, id: string) => {
+    // a locked (secret) theme opens every edit; another ready theme closes them; a saved build or a pasted code keeps
+    // them open for a buyer who has unlocked a theme
+    const fixed = FIXED_THEMES.find((t) => t.id === id);
+    const p = fixed ? !!fixed.lock : unlocked.length > 0;
+    const c = collected(fixed?.lock ? fixed : undefined);   // a theme unlocked this very moment counts already
+    setPerks(p); FEAT = featFor(p, { sides: c.sides, badge: c.badges.length > 0, logo: c.logo });
+    snap(); setSoonAsk(null); setForceSplit(false); setOrigin(saved.some((x) => x.id === id) ? id : null); setBuild(FIXED_THEMES.some((t) => t.id === id) ? { ...cloneBuild(b), mode } : norm({ ...cloneBuild(b), mode })); setThemeId(id); setSelKnob(null); scene.current?.focus(null); scene.current?.clearHighlight(); };
   const applyTheme = (id: string) => {
     const t = FIXED_THEMES.find((x) => x.id === id);
     if (t) return loadBuild(t.build, id);
@@ -395,7 +435,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
 
   // an untouched theme carries parts the public editor does not offer (sides color, firmware badge): the note is only for that. Once the
   // buyer changes anything (themeId is cleared) the design is theirs and fully editable, so the note never comes back. The bezel color is editable.
-  const hasExclusive = themeId !== "" && ((build.side !== null && !FM1_FEATURES.sides) || ((build.badge !== null || build.logo !== null) && !FM1_FEATURES.badge));
+  const hasExclusive = themeId !== "" && ((build.side !== null && !FEAT.sides) || ((build.badge !== null || build.logo !== null) && !FEAT.badge && !FEAT.logo));
 
   // Faceplate / Accent + Bezel buttons. Only a chain between Accent and Bezel: linked it is whole and gray, on hover it turns red and
   // broken, a click cuts it. Cut it stays in the same place, broken and gray; on hover it turns red and whole, a click joins them again.
@@ -542,7 +582,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
         </p>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      <div ref={editor} style={{ scrollMarginTop: 76 }} className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         {/* 3D */}
         <div className="sticky top-[73px] z-30 min-w-0 self-start bg-[#0d0d0c]/95 backdrop-blur pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 lg:bg-transparent lg:backdrop-blur-none lg:top-[88px]">
           <div className="relative" data-keep-radial>
@@ -726,13 +766,13 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
           )}
 
           {/* bezel type: the basic ring, or the badge bezel with a strip for the firmware name */}
-          {FM1_FEATURES.badge && mode === "case" && target.k === "fp" && (target.part === "bezel" || target.part === "logo") && (
+          {FEAT.badge && mode === "case" && target.k === "fp" && (target.part === "bezel" || target.part === "logo") && (
             <section>
               <div className="flex flex-wrap items-center gap-2 mb-2 text-xs text-text-muted">
                 <span className="font-semibold tracking-wider text-text-primary">BEZEL TYPE:</span>
                 {([["Basic", false], ["Badge (firmware)", true]] as const).map(([label, isBadge]) => (
                   <button key={label}
-                    onClick={() => { edit((b) => { b.badge = isBadge ? (b.badge ?? "blank") : null; }); pickFp("bezel"); }}
+                    onClick={() => { edit((b) => { b.badge = isBadge ? (b.badge ?? unlockedBadges[0] ?? null) : null; }); pickFp("bezel"); }}
                     className={`px-2 py-1 border cursor-pointer ${(build.badge !== null) === isBadge ? "border-accent text-accent" : "border-border"}`}>
                     {label}
                   </button>
@@ -741,7 +781,7 @@ export function Fm1Kustomizer({ mode }: { mode: "case" | "knobs" }) {
               {build.badge !== null && (
                 <div className="flex flex-wrap items-center gap-2 mb-3 text-xs text-text-muted">
                   <span className="font-semibold tracking-wider text-text-primary">FIRMWARE:</span>
-                  {FIRMWARES.map((fw) => (
+                  {unlockedBadges.map((fw) => (
                     <button key={fw} onClick={() => edit((b) => { b.badge = fw; })}
                       className={`px-2 py-1 border cursor-pointer ${build.badge === fw ? "border-accent text-accent" : "border-border"}`}>
                       {firmwareById(fw)?.name ?? fw}

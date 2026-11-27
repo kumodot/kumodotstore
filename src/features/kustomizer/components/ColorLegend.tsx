@@ -1,4 +1,5 @@
 import { colorsStore } from "@/data/colorsStore.ts";
+import { swatchStyle } from "@/utils/swatch.ts";
 
 export function ColorLegend() {
   const colors = colorsStore.getColors().filter((c) => c.available);
@@ -9,7 +10,7 @@ export function ColorLegend() {
         {colors.map((color) => (
           <div key={color.id} className="flex items-center gap-1.5">
             <div
-              style={{ backgroundColor: `rgb(${color.rgb.join(",")})` }}
+              style={swatchStyle(color)}
               className="w-4 h-4 rounded-sm border border-border shrink-0"
             />
             <span className="text-xs text-text-secondary">

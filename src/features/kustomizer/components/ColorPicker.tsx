@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { getSwatchStyle } from "../utils/colorSystem.ts";
 
 interface ColorPickerProps {
   anchorEl: HTMLElement;
@@ -58,7 +59,7 @@ export function ColorPicker({ anchorEl, colorId, colorOptions, onSelect, onClose
       {colorOptions.map((option) => (
         <button
           key={option.id}
-          style={{ backgroundColor: `rgb(${option.rgb[0]}, ${option.rgb[1]}, ${option.rgb[2]})` }}
+          style={getSwatchStyle(option.id)}
           className={`w-8 h-8 rounded border transition-all duration-100 cursor-pointer
             ${colorId === option.id
               ? "border-accent scale-110 ring-2 ring-accent-muted"

@@ -1,4 +1,5 @@
-import { getRgbStyle } from "../utils/colorSystem.ts";
+import { useId } from "react";
+import { getRgbStyle, isTranslucent } from "../utils/colorSystem.ts";
 
 // Layered top view of the Pocket Operator inside the POKZ case, dark version.
 // Measured from gallery_Icon.png (613 x 1098) by pixel: pads, case body, screen window and
@@ -11,6 +12,7 @@ const PAD_W = 69;
 const PAD_H = 78;
 
 export function PokzSilhouette({ ids, className, bare = false }: { ids: string[]; className?: string; bare?: boolean }) {
+  const stripes = useId();
   return (
     <svg viewBox="0 0 613 1098" className={className} role="img" aria-label="POKZ case top view">
       {!bare && <rect width="613" height="1098" fill="#0D0D0C" />}
@@ -50,12 +52,19 @@ export function PokzSilhouette({ ids, className, bare = false }: { ids: string[]
         <rect x="447" y="905" width="49" height="30" />
       </g>
 
+      <defs>
+        {/* translucent filament: diagonal stripes, same look as the swatches */}
+        <pattern id={stripes} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="5" height="14" fill="#fff" fillOpacity=".55" />
+        </pattern>
+      </defs>
       <g id="pads">
         {ids.slice(0, 16).map((id, i) => {
           const x = COLS[i % 4], y = ROWS[Math.floor(i / 4)];
           return (
             <g key={i}>
-              <rect x={x} y={y} width={PAD_W} height={PAD_H} fill={getRgbStyle(id)} />
+              <rect x={x} y={y} width={PAD_W} height={PAD_H} fill={getRgbStyle(id)} fillOpacity={isTranslucent(id) ? 0.72 : 1} />
+              {isTranslucent(id) && <rect x={x} y={y} width={PAD_W} height={PAD_H} fill={`url(#${stripes})`} />}
               <rect x={x} y={y} width={PAD_W} height="10" fill="#000" opacity=".18" />
               <rect x={x} y={y + PAD_H - 4} width={PAD_W} height="4" fill="#fff" opacity=".12" />
             </g>

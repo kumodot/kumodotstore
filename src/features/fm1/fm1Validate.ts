@@ -58,10 +58,20 @@ export function checkFm1(b: Fm1Build, colors: Color[]): Fm1Check {
       if (!v || v === "-") continue;
       if (!caseOk.has(v) && !fromTheme(pick, v)) problems.push(`${label}: ${name(v)} is not offered for the case.`);
     }
-    // parts the public Kustomizer never lets a buyer change: they can only come from a ready theme
-    if (b.side !== null && b.side !== b.body && !fromTheme((x) => x.side, b.side)) problems.push(`Sides in their own color (${name(b.side)}): the public site does not offer this.`);
-    if (b.badge !== null && !fromTheme((x) => x.badge, b.badge)) problems.push(`Firmware badge "${b.badge}": not in any released theme, the public site does not offer badges.`);
-    if (b.logo !== null && !fromTheme((x) => x.logo, b.logo)) problems.push(`Custom logo color (${name(b.logo)}): only the Studio can set this.`);
+    // parts the public Kustomizer never lets a buyer change: they can only come from a ready theme.
+    // A build based on a secret (unlocked) theme is the exception: unlocking opens these edits too.
+    const perks = !!closest?.theme.lock && closest.theme.enabled;
+    // a secret theme opens only what secret themes have (sides color, logo color, their badge bezels)
+    const secret = FIXED_THEMES.filter((t) => t.enabled && t.lock);
+    const sidesOpen = perks && secret.some((t) => t.build.side !== null && t.build.side !== t.build.body);
+    const logoOpen = perks && secret.some((t) => t.build.logo !== null);
+    if (perks) notes.push(`Based on the secret theme "${closest!.theme.name}": what the secret themes have is open to buyers who unlocked them.`);
+    if (!sidesOpen && b.side !== null && b.side !== b.body && !fromTheme((x) => x.side, b.side)) problems.push(`Sides in their own color (${name(b.side)}): the public site does not offer this.`);
+    const secretBadges = new Set(FIXED_THEMES.filter((t) => t.enabled && t.lock && t.build.badge).map((t) => t.build.badge));
+    if (perks && b.badge !== null && !secretBadges.has(b.badge)) problems.push(`Firmware badge "${b.badge}" is not the badge of any secret theme: unlocking cannot give it.`);
+    else if (perks && b.badge !== null && b.badge !== closest!.theme.build.badge) notes.push(`Badge "${b.badge}" comes from another secret theme: fine only if the buyer unlocked that one too.`);
+    else if (b.badge !== null && !fromTheme((x) => x.badge, b.badge)) problems.push(`Firmware badge "${b.badge}": not in any released theme, the public site does not offer badges.`);
+    if (!logoOpen && b.logo !== null && !fromTheme((x) => x.logo, b.logo)) problems.push(`Custom logo color (${name(b.logo)}): only the Studio can set this.`);
   }
   for (const s of SLOTS) {
     const k = b.knobs[s];
