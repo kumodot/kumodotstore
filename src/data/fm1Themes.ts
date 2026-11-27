@@ -10,8 +10,8 @@ export interface Fm1ThemeData { id: string; name: string; code: string; enabled?
 export const FM1_THEMES: Fm1ThemeData[] = [
   { id: "classic-theme", name: "Classic V1", code: "FM1v2|F=LG,DG,-,DG,-,-|L=CSPUWH,CSMGWH,CSMGWH,CSMGWH|R=CSBLWH,CSGRWH,CSYEWH,CSRDWH|4P" },
   { id: "grooved-sloop-v1", name: "Grooved SLOOP V1", code: "FM1v2|F=DG,DG,-,DG,SL,-|L=GLMGRD,GLDGWH,GLDGWH,GLDGWH|R=GLDGBL,GLDGGR,GLDGYE,GLDGOR|I3", lock: "c04d40ee2aa60c36dccb1763e0f56ad83df964d2d14a3621c37a397a41f151c1" },
-  { id: "grooved-sloop-v2", name: "Grooved SLOOP V2", code: "FM1v2|F=DG,DG,-,LG,SL,-|L=CLMGRD,CLDGWH,CLDGWH,CLDGWH|R=CLDGBL,CLDGGR,CLDGYE,CLDGOR|O3" },
-  { id: "jiant-theme", name: "BAUD GIRL V1", code: "FM1v2|F=DG,PU,PU,BK,BG,PU|L=CSPURD,CSPUWH,CSPUWH,CSPUWH|R=CSPUBL,CSPUGR,CSPUYE,CSPUOR|R4" },
+  { id: "grooved-sloop-v2", name: "Grooved SLOOP V2", code: "FM1v2|F=DG,DG,-,LG,SL,-|L=CLMGRD,CLDGWH,CLDGWH,CLDGWH|R=CLDGBL,CLDGGR,CLDGYE,CLDGOR|O3", lock: "d54a1bc9b52e6ebcf8881efa22f80a009b8d103bc9ec6249bf89e93fbc270cef" },
+  { id: "jiant-theme", name: "BAUNDGIRL", code: "FM1v2|F=DG,PU,DG,DP,BG,RD|L=CSPURD,CSPUWH,CSPUWH,CSPUWH|R=CSPUBL,CSPUGR,CSPUYE,CSPUOR|4I", lock: "989c92edfff8f1ff8b61373f98182d115ea36c6e24daca5f8e8f0c9954975d4d" },
   { id: "jiant-v1", name: "JIANT V1", code: "FM1v2|F=OR,PU,BL,PU,JI,RD|L=GLBLWH,GLBKWH,GLBKWH,GLBKWH|R=GLPUWH,GLRDWH,GLORWH,GLYEWH|X4", lock: "b4c6654d921bb06afe34d8161f49e33c34c7fc242342c23c10766374df9c2418" },
   { id: "jiant-v2", name: "JIANT V2", code: "FM1v2|F=BL,BK,-,YE,JI,RD|L=GLBLWH,GLBKWH,GLBKWH,GLBKWH|R=GLPUWH,GLRDWH,GLORWH,GLYEWH|D1", lock: "2c3a727edce07cd0092dfce3a009267519c52c2d3800d0c8384b11bdb081e7ee" },
   { id: "jiant-v3", name: "JIANT V3", code: "FM1v2|F=YE,DP,YE,DP,JI,YE|L=CSBLWH,GLBKWH,GLBKWH,GLBKWH|R=GLPUWH,GLRDWH,GLORWH,GLYEWH|VU", lock: "a06504ee5605e7246680741dd7fd75c6912d2f9ba8ccea2a9ff66af0f3c3152a" },

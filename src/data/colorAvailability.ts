@@ -10,9 +10,9 @@
 // PU Purple, LG Light Gray, MG Medium Gray, DG Dark Gray, WH White, BK Black, GD Gold.
 export const COLOR_LIMITS: Record<string, string[] | undefined> = {
   "fm1-kz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "DG", "WH", "BK", "TW", "TO"],
-  "pokz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "MG", "DG", "WH", "BK", "TW", "TO"],
-  "fm1-case": ["RD", "OR", "YE", "GR", "BL", "PU", "LG", "DG", "WH", "BK", "DP"],
-  "fm1-knobs": ["RD", "OR", "YE", "GR", "BL", "PU", "LG", "DG", "WH", "BK", "TW", "TO"],
+  "pokz": ["RD", "OR", "YE", "GR", "IB", "BL", "PU", "LG", "MG", "DG", "WH", "BK", "TW", "TO", "DP", "YS"],
+  "fm1-case": ["RD", "OR", "BL", "PU", "LG", "DG", "WH", "BK", "DP", "YS"],
+  "fm1-knobs": ["RD", "OR", "YE", "GR", "BL", "PU", "LG", "DG", "WH", "BK", "TW", "TO", "DP", "YS"],
 };
 
 export function offeredColors<T extends { id: string; available: boolean }>(line: string, all: T[]): T[] {

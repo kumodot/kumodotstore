@@ -3,7 +3,7 @@ import type { FilamentColor } from "@/types/index.ts";
 export const FILAMENT_COLORS: FilamentColor[] = [
   { id: "RD", name: "Red", rgb: [255, 0, 0], hex: "#ff0000", available: true },
   { id: "OR", name: "Orange", rgb: [255, 153, 102], hex: "#ff9966", available: true },
-  { id: "YE", name: "Yellow", rgb: [249, 231, 96], hex: "#f9e760", available: true },
+  { id: "YE", name: "Yellow", rgb: [239, 200, 101], hex: "#efc865", available: true },
   { id: "GR", name: "Green", rgb: [136, 196, 73], hex: "#88c449", available: true },
   { id: "IB", name: "Ice Blue", rgb: [178, 240, 229], hex: "#b2f0e5", available: true },
   { id: "BL", name: "Blue", rgb: [69, 204, 245], hex: "#45ccf5", available: true },
@@ -17,6 +17,7 @@ export const FILAMENT_COLORS: FilamentColor[] = [
   { id: "TW", name: "Translucent White", rgb: [219, 219, 219], hex: "#dbdbdb", available: true, translucent: true, knobsOnly: true },
   { id: "TO", name: "Translucent Orange", rgb: [255, 149, 0], hex: "#ff9500", available: true, translucent: true, knobsOnly: true },
   { id: "DP", name: "Dark Purple", rgb: [83, 63, 238], hex: "#533fee", available: true },
+  { id: "YS", name: "SUNFLOWER", rgb: [255, 209, 61], hex: "#ffd13d", available: true },
 ];
 
 export const COLORS_BY_ID: Record<string, FilamentColor> = Object.fromEntries(

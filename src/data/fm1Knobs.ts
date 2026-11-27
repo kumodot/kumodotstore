@@ -22,5 +22,5 @@ export interface Fm1KnobModel {
 }
 
 export const EXTRA_KNOBS: Fm1KnobModel[] = [
-  {"style":"tower","height":"long","letter":"T","name":"Tower Long","glb":"tower_long.glb","d":1.18,"h":1.47,"capY":0,"volCapY":0,"stats":[5,5,4,3,3,2]},
+  {"style":"tower","height":"long","letter":"T","name":"Tower Long","glb":"tower_long.glb","d":1.18,"h":1.47,"capY":1.2,"volCapY":1.2,"stats":[5,5,4,3,3,2]},
 ];
